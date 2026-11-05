@@ -78,6 +78,7 @@ erDiagram
       varchar scope
       varchar transaction_type
       date transaction_date
+      timestamptz paid_at
     }
     RECURRING_EXPENSES {
       uuid id PK
