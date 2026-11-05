@@ -20,8 +20,12 @@ from app.domains.recurring.repository import (
 from app.domains.recurring.schemas import (
     RecurringExpenseCreate,
     RecurringExpenseUpdate,
+    RecurringOccurrenceConfirmAmount,
+    RecurringOccurrenceCorrectPayment,
     RecurringOccurrenceMarkPaid,
+    RecurringOccurrenceSkip,
 )
+from app.domains.transactions.repository import TransactionRepository
 from app.domains.transactions.schemas import TransactionCreate
 from app.domains.transactions.service import TransactionService
 from app.domains.users.models import User
@@ -44,6 +48,7 @@ class RecurringService:
         self._now = now or utcnow
         self._recurring = RecurringExpenseRepository(db)
         self._occurrences = RecurringOccurrenceRepository(db)
+        self._transactions = TransactionRepository(db)
         self._audit = AuditRepository(db)
 
     def create(
@@ -205,8 +210,7 @@ class RecurringService:
         period_value = period or current_period(membership.household.timezone)
         start, end = parse_period(period_value)
 
-        if recurring.is_active:
-            self._ensure_occurrences(recurring, start, end)
+        if recurring.is_active and self._generate_for([recurring], start, end):
             self._db.commit()
 
         return self._occurrences.list_for_recurring(
@@ -215,6 +219,63 @@ class RecurringService:
             end=end,
             status=status,
         )
+
+    def ensure_occurrences_for_period(
+        self,
+        membership: HouseholdMember,
+        user: User,
+        period: str | None,
+        *,
+        commit: bool = True,
+    ) -> int:
+        """Génère les échéances manquantes des récurrences accessibles au membre."""
+        period_value = period or current_period(membership.household.timezone)
+        start, end = parse_period(period_value)
+        recurrings = self._recurring.list_active_for_member(
+            user.id,
+            membership.household_id,
+        )
+        generated = self._generate_for(recurrings, start, end)
+        if generated and commit:
+            self._db.commit()
+        return generated
+
+    def ensure_shared_occurrences_for_period(
+        self,
+        household_id: uuid.UUID,
+        period: str | None,
+        *,
+        commit: bool = False,
+    ) -> int:
+        """Génère les échéances manquantes des récurrences communes du foyer."""
+        period_value = period or current_period()
+        start, end = parse_period(period_value)
+        generated = self._generate_for(
+            self._recurring.list_active_shared(household_id),
+            start,
+            end,
+        )
+        if generated and commit:
+            self._db.commit()
+        return generated
+
+    def generate_all_for_period(
+        self,
+        period: str | None = None,
+        *,
+        commit: bool = True,
+    ) -> int:
+        """Génère les échéances manquantes de toutes les récurrences actives."""
+        period_value = period or current_period()
+        start, end = parse_period(period_value)
+        generated = self._generate_for(
+            self._recurring.list_all_active(),
+            start,
+            end,
+        )
+        if generated and commit:
+            self._db.commit()
+        return generated
 
     def mark_occurrence_paid(
         self,
@@ -241,9 +302,15 @@ class RecurringService:
                 status_code=409,
             )
 
-        default_amount = occurrence.expected_amount_cents or recurring.amount_cents
+        default_amount = (
+            occurrence.confirmed_amount_cents
+            or occurrence.expected_amount_cents
+            or recurring.amount_cents
+        )
         if payload.payment_amount_cents is None:
-            if recurring.amount_is_variable or default_amount is None:
+            if default_amount is None or (
+                recurring.amount_is_variable and occurrence.confirmed_amount_cents is None
+            ):
                 raise AppError(
                     code="payment_amount_required",
                     message="Le montant réel est obligatoire pour une charge variable.",
@@ -285,37 +352,183 @@ class RecurringService:
             entity_id=occurrence.id,
             actor_user_id=user.id,
             household_id=recurring.household_id,
+            details={
+                "amount_cents": amount_cents,
+                "paid_at": payload.paid_at.isoformat(),
+            },
             request_id=request_id_var.get(),
         )
         self._db.commit()
         return occurrence
 
-    def _ensure_occurrences(
+    def confirm_amount(
         self,
-        recurring: RecurringExpense,
+        membership: HouseholdMember,
+        user: User,
+        occurrence_id: uuid.UUID,
+        payload: RecurringOccurrenceConfirmAmount,
+    ) -> RecurringOccurrence:
+        occurrence, recurring = self._locked_occurrence(membership, user, occurrence_id)
+        if occurrence.status == "paid":
+            raise AppError(
+                code="occurrence_paid",
+                message="Une échéance payée doit être corrigée explicitement.",
+                status_code=409,
+            )
+        if occurrence.status == "skipped":
+            raise AppError(
+                code="occurrence_skipped",
+                message="Une échéance ignorée ne peut pas être confirmée.",
+                status_code=409,
+            )
+
+        occurrence.confirmed_amount_cents = payload.confirmed_amount_cents
+        occurrence.confirmed_at = self._now()
+        occurrence.status = "confirmed"
+
+        self._audit.add(
+            occurred_at=self._now(),
+            action="recurring_occurrence.confirmed",
+            entity_type="recurring_occurrence",
+            entity_id=occurrence.id,
+            actor_user_id=user.id,
+            household_id=recurring.household_id,
+            details={"amount_cents": payload.confirmed_amount_cents},
+            request_id=request_id_var.get(),
+        )
+        self._db.commit()
+        return occurrence
+
+    def skip_occurrence(
+        self,
+        membership: HouseholdMember,
+        user: User,
+        occurrence_id: uuid.UUID,
+        payload: RecurringOccurrenceSkip,
+    ) -> RecurringOccurrence:
+        occurrence, recurring = self._locked_occurrence(membership, user, occurrence_id)
+        if occurrence.status == "paid":
+            raise AppError(
+                code="occurrence_paid",
+                message="Une échéance payée ne peut pas être ignorée sans correction préalable.",
+                status_code=409,
+            )
+        if occurrence.status == "skipped":
+            return occurrence
+
+        occurrence.status = "skipped"
+        occurrence.skipped_at = self._now()
+        occurrence.skip_reason = payload.reason
+
+        self._audit.add(
+            occurred_at=self._now(),
+            action="recurring_occurrence.skipped",
+            entity_type="recurring_occurrence",
+            entity_id=occurrence.id,
+            actor_user_id=user.id,
+            household_id=recurring.household_id,
+            details={"reason": payload.reason},
+            request_id=request_id_var.get(),
+        )
+        self._db.commit()
+        return occurrence
+
+    def correct_payment(
+        self,
+        membership: HouseholdMember,
+        user: User,
+        occurrence_id: uuid.UUID,
+        payload: RecurringOccurrenceCorrectPayment,
+    ) -> RecurringOccurrence:
+        occurrence, recurring = self._locked_occurrence(membership, user, occurrence_id)
+        if occurrence.status != "paid" or occurrence.transaction_id is None:
+            raise AppError(
+                code="occurrence_not_paid",
+                message="Seule une échéance payée peut être corrigée.",
+                status_code=409,
+            )
+
+        transaction = self._transactions.get_by_id(occurrence.transaction_id)
+        if transaction is None or transaction.deleted_at is not None:
+            raise AppError(
+                code="linked_transaction_missing",
+                message="La transaction liée à cette échéance est introuvable.",
+                status_code=409,
+            )
+        refunded = self._transactions.sum_refunds(transaction.id)
+        if payload.payment_amount_cents < refunded:
+            raise AppError(
+                code="invalid_payment_amount",
+                message="Le montant corrigé ne peut pas être inférieur aux remboursements.",
+                status_code=422,
+            )
+
+        previous_amount = occurrence.payment_amount_cents
+        previous_paid_at = occurrence.paid_at
+        paid_local = payload.paid_at.astimezone(ZoneInfo(membership.household.timezone))
+
+        transaction.amount_cents = payload.payment_amount_cents
+        transaction.transaction_date = paid_local.date()
+        transaction.paid_at = payload.paid_at
+        if payload.note is not None:
+            transaction.notes = payload.note
+
+        occurrence.payment_amount_cents = payload.payment_amount_cents
+        occurrence.paid_at = payload.paid_at
+        occurrence.payment_note = payload.note
+
+        self._audit.add(
+            occurred_at=self._now(),
+            action="recurring_occurrence.payment_corrected",
+            entity_type="recurring_occurrence",
+            entity_id=occurrence.id,
+            actor_user_id=user.id,
+            household_id=recurring.household_id,
+            details={
+                "previous_amount_cents": previous_amount,
+                "amount_cents": payload.payment_amount_cents,
+                "previous_paid_at": (
+                    previous_paid_at.isoformat() if previous_paid_at is not None else None
+                ),
+                "paid_at": payload.paid_at.isoformat(),
+            },
+            request_id=request_id_var.get(),
+        )
+        self._db.commit()
+        return occurrence
+
+    def _locked_occurrence(
+        self,
+        membership: HouseholdMember,
+        user: User,
+        occurrence_id: uuid.UUID,
+    ) -> tuple[RecurringOccurrence, RecurringExpense]:
+        occurrence = self._occurrences.get_for_update(occurrence_id)
+        if occurrence is None:
+            raise self._occurrence_not_found()
+        recurring = self._recurring.get_by_id(occurrence.recurring_expense_id)
+        if recurring is None:
+            raise self._occurrence_not_found()
+        self._assert_access(membership, user, recurring)
+        return occurrence, recurring
+
+    def _generate_for(
+        self,
+        recurrings: list[RecurringExpense],
         start: date,
         end: date,
-    ) -> None:
-        due_dates = self._due_dates(recurring, start, end)
-        if not due_dates:
-            return
-
-        existing = self._occurrences.existing_due_dates(recurring.id, start, end)
-        added = False
-        for due_date in due_dates:
-            if due_date in existing:
-                continue
-            self._occurrences.add(
-                RecurringOccurrence(
-                    recurring_expense_id=recurring.id,
-                    due_date=due_date,
-                    expected_amount_cents=recurring.amount_cents,
-                    status="pending",
-                )
-            )
-            added = True
-        if added:
-            self._db.flush()
+    ) -> int:
+        rows = [
+            {
+                "recurring_expense_id": recurring.id,
+                "due_date": due_date,
+                "expected_amount_cents": recurring.amount_cents,
+                "status": "pending",
+            }
+            for recurring in recurrings
+            for due_date in self._due_dates(recurring, start, end)
+        ]
+        return self._occurrences.insert_missing(rows)
 
     @staticmethod
     def _due_dates(

@@ -7,6 +7,7 @@ from pydantic import EmailStr, TypeAdapter, ValidationError
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.domains.households.service import HouseholdService
+from app.domains.recurring.service import RecurringService
 from app.infrastructure.db.session import build_engine, build_session_factory
 
 
@@ -43,6 +44,22 @@ def _bootstrap(args: argparse.Namespace) -> int:
     return 0
 
 
+def _recurring_generate(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    engine = build_engine(settings)
+    session_factory = build_session_factory(engine)
+    try:
+        with session_factory() as session:
+            generated = RecurringService(session).generate_all_for_period(
+                args.period,
+            )
+    finally:
+        engine.dispose()
+
+    print(f"Échéances générées : {generated}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -59,6 +76,24 @@ def main(argv: list[str] | None = None) -> int:
         help="Mot de passe (déconseillé en ligne de commande, préférer la saisie interactive)",
     )
     bootstrap_parser.set_defaults(handler=_bootstrap)
+
+    recurring_parser = subparsers.add_parser(
+        "recurring",
+        help="Générer les échéances des charges récurrentes",
+    )
+    recurring_subparsers = recurring_parser.add_subparsers(
+        dest="recurring_command",
+        required=True,
+    )
+    generate_parser = recurring_subparsers.add_parser(
+        "generate",
+        help="Générer les échéances manquantes pour une période",
+    )
+    generate_parser.add_argument(
+        "--period",
+        help="Période YYYY-MM (par défaut : mois courant)",
+    )
+    generate_parser.set_defaults(handler=_recurring_generate)
 
     args = parser.parse_args(argv)
 

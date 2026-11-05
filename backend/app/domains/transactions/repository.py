@@ -4,6 +4,9 @@ from datetime import date
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.domains.allocations.models import HouseholdContribution
+from app.domains.planned.models import PlannedExpense
+from app.domains.recurring.models import RecurringOccurrence
 from app.domains.transactions.models import Transaction
 
 
@@ -118,6 +121,27 @@ class TransactionRepository:
             )
         )
         return int(total or 0)
+
+    def linked_source(self, transaction_id: uuid.UUID) -> str | None:
+        if self._db.scalar(
+            select(RecurringOccurrence.id)
+            .where(RecurringOccurrence.transaction_id == transaction_id)
+            .limit(1)
+        ):
+            return "recurring_occurrence"
+        if self._db.scalar(
+            select(PlannedExpense.id)
+            .where(PlannedExpense.transaction_id == transaction_id)
+            .limit(1)
+        ):
+            return "planned_expense"
+        if self._db.scalar(
+            select(HouseholdContribution.id)
+            .where(HouseholdContribution.transaction_id == transaction_id)
+            .limit(1)
+        ):
+            return "household_contribution"
+        return None
 
     def add(self, transaction: Transaction) -> Transaction:
         self._db.add(transaction)

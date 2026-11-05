@@ -202,6 +202,7 @@ class TransactionService:
         payload: TransactionUpdate,
     ) -> Transaction:
         transaction = self._accessible_transaction(membership, user, transaction_id)
+        self._assert_not_linked(transaction)
 
         if payload.category_id is not None and payload.category_id != transaction.category_id:
             if transaction.transaction_type == "refund":
@@ -262,6 +263,7 @@ class TransactionService:
         transaction_id: uuid.UUID,
     ) -> None:
         transaction = self._accessible_transaction(membership, user, transaction_id)
+        self._assert_not_linked(transaction)
         if (
             transaction.transaction_type == "expense"
             and self._transactions.sum_refunds(transaction.id) > 0
@@ -313,6 +315,18 @@ class TransactionService:
             category_id,
             require_active=require_active,
         )
+
+    def _assert_not_linked(self, transaction: Transaction) -> None:
+        source = self._transactions.linked_source(transaction.id)
+        if source is not None:
+            raise AppError(
+                code="linked_transaction",
+                message=(
+                    "Cette transaction est liée à une échéance, une dépense prévue "
+                    "ou une contribution. Corrigez l'élément source."
+                ),
+                status_code=409,
+            )
 
     def _validate_amount_change(self, transaction: Transaction, amount_cents: int) -> None:
         if transaction.transaction_type == "expense":

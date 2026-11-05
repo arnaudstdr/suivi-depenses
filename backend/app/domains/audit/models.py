@@ -15,6 +15,12 @@ class AuditLog(Base):
         CheckConstraint("char_length(trim(action)) > 0", name="action_not_blank"),
         Index("ix_audit_logs_actor_user_id_occurred_at", "actor_user_id", "occurred_at"),
         Index("ix_audit_logs_household_id_occurred_at", "household_id", "occurred_at"),
+        Index(
+            "ix_audit_logs_entity_type_entity_id_occurred_at",
+            "entity_type",
+            "entity_id",
+            "occurred_at",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)

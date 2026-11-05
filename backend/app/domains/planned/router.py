@@ -10,6 +10,7 @@ from app.api.pagination import Page, PageParams
 from app.domains.households.models import HouseholdMember
 from app.domains.planned.models import PlannedExpense
 from app.domains.planned.schemas import (
+    PlannedExpenseCorrectPayment,
     PlannedExpenseCreate,
     PlannedExpenseMarkPaid,
     PlannedExpensePublic,
@@ -95,6 +96,23 @@ def mark_planned_expense_paid(
     _: None = Depends(require_csrf),
 ) -> PlannedExpense:
     return PlannedExpenseService(db).mark_paid(membership, user, planned_id, payload)
+
+
+@router.post("/{planned_id}/correct-payment", response_model=PlannedExpensePublic)
+def correct_planned_expense_payment(
+    planned_id: UUID,
+    payload: PlannedExpenseCorrectPayment,
+    membership: HouseholdMember = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+    _: None = Depends(require_csrf),
+) -> PlannedExpense:
+    return PlannedExpenseService(db).correct_payment(
+        membership,
+        user,
+        planned_id,
+        payload,
+    )
 
 
 @router.delete("/{planned_id}", status_code=status.HTTP_204_NO_CONTENT)

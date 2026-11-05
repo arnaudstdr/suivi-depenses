@@ -14,10 +14,12 @@ from app.domains.households.models import HouseholdMember
 from app.domains.planned.models import PlannedExpense
 from app.domains.planned.repository import PlannedExpenseRepository
 from app.domains.planned.schemas import (
+    PlannedExpenseCorrectPayment,
     PlannedExpenseCreate,
     PlannedExpenseMarkPaid,
     PlannedExpenseUpdate,
 )
+from app.domains.transactions.repository import TransactionRepository
 from app.domains.transactions.schemas import TransactionCreate
 from app.domains.transactions.service import TransactionService
 from app.domains.users.models import User
@@ -32,6 +34,7 @@ class PlannedExpenseService:
         self._db = db
         self._now = now or utcnow
         self._planned = PlannedExpenseRepository(db)
+        self._transactions = TransactionRepository(db)
         self._audit = AuditRepository(db)
 
     def create(
@@ -197,6 +200,69 @@ class PlannedExpenseService:
             entity_id=planned.id,
             actor_user_id=user.id,
             household_id=planned.household_id,
+            request_id=request_id_var.get(),
+        )
+        self._db.commit()
+        return planned
+
+    def correct_payment(
+        self,
+        membership: HouseholdMember,
+        user: User,
+        planned_id: uuid.UUID,
+        payload: PlannedExpenseCorrectPayment,
+    ) -> PlannedExpense:
+        planned = self._planned.get_for_update(planned_id)
+        if planned is None:
+            raise self._not_found()
+        self._assert_access(membership, user, planned)
+        if planned.status != "paid" or planned.transaction_id is None:
+            raise AppError(
+                code="planned_not_paid",
+                message="Seule une dépense payée peut être corrigée.",
+                status_code=409,
+            )
+
+        transaction = self._transactions.get_by_id(planned.transaction_id)
+        if transaction is None or transaction.deleted_at is not None:
+            raise AppError(
+                code="linked_transaction_missing",
+                message="La transaction liée à cette dépense est introuvable.",
+                status_code=409,
+            )
+        refunded = self._transactions.sum_refunds(transaction.id)
+        if payload.payment_amount_cents < refunded:
+            raise AppError(
+                code="invalid_payment_amount",
+                message="Le montant corrigé ne peut pas être inférieur aux remboursements.",
+                status_code=422,
+            )
+
+        previous_amount = transaction.amount_cents
+        previous_paid_at = transaction.paid_at
+        paid_local = payload.paid_at.astimezone(ZoneInfo(membership.household.timezone))
+
+        transaction.amount_cents = payload.payment_amount_cents
+        transaction.transaction_date = paid_local.date()
+        transaction.paid_at = payload.paid_at
+        if payload.note is not None:
+            transaction.notes = payload.note
+
+        self._audit.add(
+            occurred_at=self._now(),
+            action="planned.payment_corrected",
+            entity_type="planned_expense",
+            entity_id=planned.id,
+            actor_user_id=user.id,
+            household_id=planned.household_id,
+            details={
+                "previous_amount_cents": previous_amount,
+                "amount_cents": payload.payment_amount_cents,
+                "previous_paid_at": (
+                    previous_paid_at.isoformat() if previous_paid_at is not None else None
+                ),
+                "paid_at": payload.paid_at.isoformat(),
+            },
             request_id=request_id_var.get(),
         )
         self._db.commit()

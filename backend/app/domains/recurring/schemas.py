@@ -80,10 +80,13 @@ class RecurringOccurrencePublic(BaseModel):
     due_date: date
     expected_amount_cents: int | None
     confirmed_amount_cents: int | None
+    confirmed_at: datetime | None
     status: str
     paid_at: datetime | None
     payment_amount_cents: int | None
     payment_note: str | None
+    skipped_at: datetime | None
+    skip_reason: str | None
     transaction_id: UUID | None
     created_at: datetime
     updated_at: datetime
@@ -92,6 +95,20 @@ class RecurringOccurrencePublic(BaseModel):
 class RecurringOccurrenceMarkPaid(BaseModel):
     paid_at: AwareDatetime
     payment_amount_cents: int | None = Field(default=None, gt=0, strict=True)
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class RecurringOccurrenceConfirmAmount(BaseModel):
+    confirmed_amount_cents: int = Field(gt=0, strict=True)
+
+
+class RecurringOccurrenceSkip(BaseModel):
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class RecurringOccurrenceCorrectPayment(BaseModel):
+    paid_at: AwareDatetime
+    payment_amount_cents: int = Field(gt=0, strict=True)
     note: str | None = Field(default=None, max_length=2000)
 
 

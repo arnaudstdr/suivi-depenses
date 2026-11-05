@@ -1,7 +1,10 @@
 import uuid
 from datetime import date
+from typing import Any, cast
 
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session, joinedload
 
 from app.domains.recurring.models import RecurringExpense, RecurringOccurrence
@@ -69,6 +72,53 @@ class RecurringExpenseRepository:
         )
         return items, total
 
+    def list_active_for_member(
+        self,
+        user_id: uuid.UUID,
+        household_id: uuid.UUID,
+    ) -> list[RecurringExpense]:
+        return list(
+            self._db.scalars(
+                select(RecurringExpense)
+                .where(
+                    RecurringExpense.is_active.is_(True),
+                    or_(
+                        and_(
+                            RecurringExpense.scope == "personal",
+                            RecurringExpense.owner_user_id == user_id,
+                        ),
+                        and_(
+                            RecurringExpense.scope == "shared",
+                            RecurringExpense.household_id == household_id,
+                        ),
+                    ),
+                )
+                .order_by(RecurringExpense.created_at)
+            ).all()
+        )
+
+    def list_active_shared(self, household_id: uuid.UUID) -> list[RecurringExpense]:
+        return list(
+            self._db.scalars(
+                select(RecurringExpense)
+                .where(
+                    RecurringExpense.is_active.is_(True),
+                    RecurringExpense.scope == "shared",
+                    RecurringExpense.household_id == household_id,
+                )
+                .order_by(RecurringExpense.created_at)
+            ).all()
+        )
+
+    def list_all_active(self) -> list[RecurringExpense]:
+        return list(
+            self._db.scalars(
+                select(RecurringExpense)
+                .where(RecurringExpense.is_active.is_(True))
+                .order_by(RecurringExpense.created_at)
+            ).all()
+        )
+
     def add(self, recurring: RecurringExpense) -> RecurringExpense:
         self._db.add(recurring)
         return recurring
@@ -126,6 +176,23 @@ class RecurringOccurrenceRepository:
                 .order_by(RecurringOccurrence.due_date)
             ).all()
         )
+
+    def insert_missing(self, rows: list[dict[str, Any]]) -> int:
+        if not rows:
+            return 0
+        statement = (
+            insert(RecurringOccurrence)
+            .values(rows)
+            .on_conflict_do_nothing(
+                index_elements=[
+                    RecurringOccurrence.recurring_expense_id,
+                    RecurringOccurrence.due_date,
+                ]
+            )
+            .returning(RecurringOccurrence.id)
+        )
+        result = cast(CursorResult[Any], self._db.execute(statement))
+        return len(result.scalars().all())
 
     def add(self, occurrence: RecurringOccurrence) -> RecurringOccurrence:
         self._db.add(occurrence)

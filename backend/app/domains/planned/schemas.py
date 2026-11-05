@@ -41,6 +41,12 @@ class PlannedExpenseMarkPaid(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
 
 
+class PlannedExpenseCorrectPayment(BaseModel):
+    paid_at: AwareDatetime
+    payment_amount_cents: int = Field(gt=0, strict=True)
+    note: str | None = Field(default=None, max_length=2000)
+
+
 class PlannedExpensePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

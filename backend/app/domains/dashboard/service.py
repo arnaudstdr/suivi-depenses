@@ -23,6 +23,7 @@ from app.domains.dashboard.schemas import (
 from app.domains.households.models import HouseholdMember
 from app.domains.planned.models import PlannedExpense
 from app.domains.recurring.models import RecurringExpense, RecurringOccurrence
+from app.domains.recurring.service import RecurringService
 from app.domains.transactions.models import Transaction
 from app.domains.users.models import User
 
@@ -68,6 +69,15 @@ class DashboardService:
                 status_code=409,
             )
         snapshot_at = balance.recorded_at
+
+        # Les échéances manquantes sont générées à la lecture du tableau de bord
+        # afin que le disponible soit correct même si la vue des occurrences n'a
+        # jamais été ouverte.
+        RecurringService(self._db, self._now).ensure_occurrences_for_period(
+            membership,
+            user,
+            current,
+        )
 
         recurring_rows = self._dashboard.personal_recurring(
             user.id,

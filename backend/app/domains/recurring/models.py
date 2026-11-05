@@ -132,6 +132,10 @@ class RecurringOccurrence(Base, TimestampMixin):
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
     expected_amount_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     confirmed_amount_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     status: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
@@ -140,6 +144,11 @@ class RecurringOccurrence(Base, TimestampMixin):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     payment_amount_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     payment_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    skipped_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    skip_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     transaction_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("transactions.id", ondelete="SET NULL"),
         nullable=True,

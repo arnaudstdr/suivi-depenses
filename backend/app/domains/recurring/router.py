@@ -12,8 +12,11 @@ from app.domains.recurring.schemas import (
     RecurringExpenseCreate,
     RecurringExpensePublic,
     RecurringExpenseUpdate,
+    RecurringOccurrenceConfirmAmount,
+    RecurringOccurrenceCorrectPayment,
     RecurringOccurrenceMarkPaid,
     RecurringOccurrencePublic,
+    RecurringOccurrenceSkip,
 )
 from app.domains.recurring.service import RecurringService
 from app.domains.users.models import User
@@ -139,6 +142,66 @@ def mark_occurrence_paid(
     _: None = Depends(require_csrf),
 ) -> RecurringOccurrence:
     return RecurringService(db).mark_occurrence_paid(
+        membership,
+        user,
+        occurrence_id,
+        payload,
+    )
+
+
+@occurrences_router.post(
+    "/{occurrence_id}/confirm-amount",
+    response_model=RecurringOccurrencePublic,
+)
+def confirm_occurrence_amount(
+    occurrence_id: UUID,
+    payload: RecurringOccurrenceConfirmAmount,
+    membership: HouseholdMember = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+    _: None = Depends(require_csrf),
+) -> RecurringOccurrence:
+    return RecurringService(db).confirm_amount(
+        membership,
+        user,
+        occurrence_id,
+        payload,
+    )
+
+
+@occurrences_router.post(
+    "/{occurrence_id}/skip",
+    response_model=RecurringOccurrencePublic,
+)
+def skip_occurrence(
+    occurrence_id: UUID,
+    payload: RecurringOccurrenceSkip,
+    membership: HouseholdMember = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+    _: None = Depends(require_csrf),
+) -> RecurringOccurrence:
+    return RecurringService(db).skip_occurrence(
+        membership,
+        user,
+        occurrence_id,
+        payload,
+    )
+
+
+@occurrences_router.post(
+    "/{occurrence_id}/correct-payment",
+    response_model=RecurringOccurrencePublic,
+)
+def correct_occurrence_payment(
+    occurrence_id: UUID,
+    payload: RecurringOccurrenceCorrectPayment,
+    membership: HouseholdMember = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+    _: None = Depends(require_csrf),
+) -> RecurringOccurrence:
+    return RecurringService(db).correct_payment(
         membership,
         user,
         occurrence_id,
