@@ -195,12 +195,13 @@ La PWA permet l'installation sur mobile et desktop. En V1, les données déjà s
 - Le solde de départ est saisi manuellement et horodaté.
 - Les revenus futurs ne sont pas ajoutés au disponible.
 - Les charges récurrentes personnelles restant à payer sont déduites.
-- Les parts de charges communes restant à financer sont agrégées dans une seule ligne.
+- Les parts des charges communes et la contribution au budget courses sont agrégées dans une seule participation au foyer.
+- Le membre peut marquer explicitement son virement mensuel comme effectué ; le statut est historisé et ne change pas à lui seul le disponible.
 - Une sortie payée après le dernier instantané de solde reste déduite jusqu'à la saisie d'un nouveau solde qui l'intègre. Le marquage du virement de participation comme effectué ne modifie pas à lui seul le disponible prévisionnel.
 - Une dépense de courses commune diminue le budget courses, pas le disponible personnel.
 - Le budget courses est initialisé à 490 €/mois et configurable.
 - La répartition par défaut est 55/45 et modifiable.
-- Les dépenses ponctuelles personnelles prévues sont déduites jusqu'à leur paiement.
+- Les dépenses ponctuelles personnelles prévues ou engagées sont déduites ; une dépense annulée cesse de l'être. Une dépense payée après le dernier instantané reste déduite jusqu'à la prochaine saisie du solde.
 - Les montants sont calculés au centime.
 
 ---
