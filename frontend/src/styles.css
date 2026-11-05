@@ -26,3 +26,5 @@
 .contribution-action .text-link{padding:0}
 .contribution-action .form-hint{margin:0;width:100%}
 .status-paid{color:var(--success,#23865b)!important}
+
+.recurring-check{border:1px solid var(--line);background:transparent;color:var(--primary);border-radius:7px;padding:6px 9px;font-size:9px;font-weight:700;white-space:nowrap;cursor:pointer}.recurring-check.is-paid{border-color:var(--success,#23865b);color:var(--success,#23865b);background:rgba(35,134,91,.08)}
