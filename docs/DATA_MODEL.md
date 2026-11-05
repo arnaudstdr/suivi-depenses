@@ -36,7 +36,46 @@ Les revenus de référence ne participent pas au calcul du disponible prévision
 
 ## 3. users, households, household_members
 
-Les tables d'identité conservent les champs usuels : UUID, email unique, mot de passe haché, prénom, statut actif et timestamps. Un foyer possède un nom, une devise EUR et le fuseau Europe/Paris. household_members associe les deux comptes au foyer avec un rôle et un statut actif.
+Ces tables constituent le socle d'identité implémenté par la migration `0001_identity_core`.
+
+### users
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| email | VARCHAR(320) | NOT NULL, UNIQUE, stocké en minuscules (`CHECK email = lower(email)`) |
+| password_hash | VARCHAR(255) | NOT NULL, hachage Argon2id à venir |
+| first_name | VARCHAR(100) | NOT NULL, non vide |
+| is_active | BOOLEAN | NOT NULL, défaut `true` |
+| created_at | TIMESTAMPTZ | NOT NULL, défaut `now()` |
+| updated_at | TIMESTAMPTZ | NOT NULL, défaut `now()` |
+
+### households
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| name | VARCHAR(150) | NOT NULL, non vide |
+| currency | VARCHAR(3) | NOT NULL, défaut `EUR`, contrainte `EUR` en V1 |
+| timezone | VARCHAR(64) | NOT NULL, défaut `Europe/Paris`, contrainte `Europe/Paris` en V1 |
+| created_at | TIMESTAMPTZ | NOT NULL, défaut `now()` |
+| updated_at | TIMESTAMPTZ | NOT NULL, défaut `now()` |
+
+### household_members
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| household_id | UUID | FK households, `ON DELETE CASCADE`, NOT NULL |
+| user_id | UUID | FK users, `ON DELETE CASCADE`, NOT NULL |
+| role | VARCHAR(20) | NOT NULL, `owner` ou `member`, défaut `member` |
+| is_active | BOOLEAN | NOT NULL, défaut `true` |
+| created_at | TIMESTAMPTZ | NOT NULL, défaut `now()` |
+| updated_at | TIMESTAMPTZ | NOT NULL, défaut `now()` |
+
+Contraintes : `UNIQUE(household_id, user_id)` et `UNIQUE(user_id)`, car un compte appartient à un seul foyer en V1. `household_members` associe les deux comptes au foyer avec un rôle et un statut actif.
+
+Les tables `sessions`, `invitations` et `audit_logs` ne sont pas encore créées. Elles seront spécifiées et ajoutées avec la tranche « socle sécurisé ».
 
 ## 4. personal_balance_entries
 

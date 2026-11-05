@@ -34,7 +34,9 @@ Les achats enregistrés comme courses communes diminuent uniquement l'enveloppe 
 
 ## État du projet
 
-La conception fonctionnelle et la maquette UX sont validées. Le dépôt entre en phase d'implémentation ; le frontend actuel reste une maquette avec données fictives et ne constitue pas encore une application connectée à un backend.
+La conception fonctionnelle et la maquette UX sont validées. Le socle backend est en place : FastAPI, SQLAlchemy 2, Alembic, PostgreSQL, endpoints de santé, tests et CI. Le frontend actuel reste une maquette avec données fictives et ne consomme pas encore l'API.
+
+Les tables d'identité `users`, `households` et `household_members` sont créées. L'authentification, les sessions, les invitations et le contrôle d'accès constituent la prochaine tranche.
 
 ## Documentation
 
@@ -48,4 +50,4 @@ La conception fonctionnelle et la maquette UX sont validées. Le dépôt entre e
 
 ## Prochaine étape
 
-Démarrer l'implémentation par la mise en place du socle backend et de son environnement de développement, en suivant `AGENTS.md` et `docs/ROADMAP.md`.
+Implémenter le socle sécurisé : sessions opaques, invitations, authentification par cookie, protection CSRF, contrôle d'accès personnel/foyer et audit, en suivant `AGENTS.md` et `docs/ROADMAP.md`. Les commandes backend sont documentées dans [`backend/README.md`](backend/README.md).

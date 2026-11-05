@@ -201,13 +201,14 @@ Créer des tests unitaires dédiés à ces cas, y compris les paiements juste av
 7. Relire le diff, vérifier qu'aucun secret ou fichier généré n'est inclus.
 8. Résumer les fichiers modifiés, les tests réellement exécutés et les points restant à faire.
 
-## État initial du dépôt
-
-Au moment de la rédaction de ces consignes :
+## État actuel du dépôt
 
 - Les documents de conception sont présents dans `docs/`.
 - Le frontend contient une maquette React/Vite avec données fictives.
-- Le backend, les migrations, les tests automatisés, Docker Compose et la configuration de déploiement ne sont pas encore présents dans l'arborescence suivie.
-- Le frontend possède actuellement les scripts npm `dev`, `build` et `preview`. Il n'existe pas encore de script `lint` ou `test` déclaré dans son `package.json`.
+- Le backend FastAPI/SQLAlchemy/Alembic est présent dans `backend/`, avec les tables d'identité `users`, `households` et `household_members`.
+- Les migrations Alembic, les tests backend, Docker Compose pour PostgreSQL, le Dockerfile API et la CI GitHub Actions sont présents.
+- L'authentification, les sessions, les invitations, le CSRF et l'audit ne sont pas encore implémentés.
+- Le frontend possède les scripts npm `dev`, `build` et `preview`; il n'existe pas encore de script `lint` ou `test` déclaré dans son `package.json`.
+- Les commandes backend réellement disponibles sont documentées dans `backend/README.md` et dans le `Makefile`.
 
 Cette section doit être mise à jour lorsque l'architecture réelle du dépôt évolue. Ne pas créer des fichiers ou commandes manquants en supposant qu'ils existent.

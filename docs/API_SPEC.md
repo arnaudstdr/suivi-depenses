@@ -177,3 +177,27 @@ Chaque règle contient un pourcentage par membre et doit totaliser exactement 10
 
 Les ressources retournées ne contiennent que les champs autorisés. Utiliser des codes HTTP standards (200, 201, 204, 400, 401, 403, 404, 409, 422, 500) et un corps d'erreur stable avec `code`, `message`, `details` et `request_id`.
 
+Exemple :
+
+```json
+{
+  "code": "not_found",
+  "message": "Not Found",
+  "details": null,
+  "request_id": "0e8aa9e0-13d8-4612-afb5-6973a41d7e1b"
+}
+```
+
+Le même identifiant est renvoyé dans l'en-tête `X-Request-ID` et journalisé avec la requête. Les corps de validation ne renvoient pas les valeurs saisies.
+
+## 12. Santé
+
+Ces routes sont hors du préfixe `/api/v1` et ne révèlent aucune information d'infrastructure.
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/health/live` | Le processus répond |
+| GET | `/health/ready` | PostgreSQL est joignable |
+
+`/health/live` renvoie `200 {"status": "ok"}`. `/health/ready` renvoie `200 {"status": "ok"}` lorsque la base répond, sinon `503 {"status": "unavailable"}`.
+

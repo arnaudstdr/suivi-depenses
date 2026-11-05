@@ -1,0 +1,68 @@
+name: Backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: suivi_depenses_test
+          POSTGRES_USER: suivi
+          POSTGRES_PASSWORD: suivi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U suivi -d suivi_depenses_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://suivi:suivi@127.0.0.1:5432/suivi_depenses_test
+      TEST_DATABASE_URL: postgresql+psycopg://suivi:suivi@127.0.0.1:5432/suivi_depenses_test
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.10.9"
+
+      - name: Installer les dépendances
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format
+        run: uv run ruff format --check .
+
+      - name: Typage
+        run: uv run mypy app
+
+      - name: Vérifier les migrations
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+
+      - name: Tests
+        run: uv run pytest -q

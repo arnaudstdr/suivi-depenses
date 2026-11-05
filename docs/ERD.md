@@ -1,14 +1,16 @@
 # Diagramme entité-association — Suivi des dépenses
 
-**Version :** 0.5  
-**Référence :** DATA_MODEL.md v0.4  
+**Version :** 0.5
+
+**Référence :** DATA_MODEL.md v0.5
+
 **Statut :** Diagramme conceptuel aligné sur le périmètre fonctionnel
 
 ## Diagramme
 
 ```mermaid
 erDiagram
-    USERS ||--o{ HOUSEHOLD_MEMBERS : belongs
+    USERS ||--o| HOUSEHOLD_MEMBERS : belongs
     HOUSEHOLDS ||--o{ HOUSEHOLD_MEMBERS : contains
     USERS ||--o{ PERSONAL_BALANCE_ENTRIES : records
     USERS ||--o{ HOUSEHOLD_CONTRIBUTIONS : pays
@@ -33,18 +35,28 @@ erDiagram
     USERS {
       uuid id PK
       varchar email UK
+      varchar password_hash
+      varchar first_name
+      boolean is_active
+      timestamptz created_at
+      timestamptz updated_at
     }
     HOUSEHOLDS {
       uuid id PK
       varchar name
       varchar currency
       varchar timezone
+      timestamptz created_at
+      timestamptz updated_at
     }
     HOUSEHOLD_MEMBERS {
       uuid id PK
       uuid household_id FK
       uuid user_id FK
       varchar role
+      boolean is_active
+      timestamptz created_at
+      timestamptz updated_at
     }
     HOUSEHOLD_CONTRIBUTIONS {
       uuid id PK
