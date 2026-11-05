@@ -50,7 +50,7 @@ Règles :
 - Toute dépense payée avant ou à la date de l'instantané est déjà reflétée dans le solde et ne doit pas être déduite une seconde fois.
 - Une charge récurrente non payée reste déduite si elle est due ou à venir dans la période. Si elle est payée après l'instantané, elle reste déduite jusqu'à la prochaine saisie du solde.
 - Une dépense ponctuelle prévue ou engagée est déduite. Si elle est payée après l'instantané, elle reste déduite jusqu'à la prochaine saisie du solde. Si elle est annulée, elle cesse immédiatement d'être déduite.
-- Une participation au foyer reste déduite après que le virement est marqué comme effectué, tant que ce virement est postérieur au dernier instantané de solde.
+- Une participation au foyer se pointe comme une échéance récurrente : l'utilisateur confirme la date réelle du virement et le montant réellement transféré. Elle reste déduite après pointage tant que ce virement est postérieur au dernier instantané de solde.
 - Les achats de courses communes ne sont jamais déduits du suivi personnel.
 - Aucun revenu attendu, même certain, n'est ajouté.
 - Le calcul porte sur le reste du mois sélectionné, depuis la date de référence du solde jusqu'à la fin du mois.
@@ -208,7 +208,8 @@ La PWA permet l'installation sur mobile et desktop. En V1, les données déjà s
 - Chaque échéance récurrente peut être pointée individuellement comme payée avec son montant réel et sa date de paiement.
 - Le pointage d'une échéance payée après le dernier instantané de solde ne modifie pas à lui seul le disponible.
 - Les parts des charges communes et la contribution au budget courses sont agrégées dans une seule participation au foyer.
-- Le membre peut marquer explicitement son virement mensuel comme effectué ; le statut est historisé et ne change pas à lui seul le disponible.
+- Le membre peut pointer explicitement son virement mensuel comme effectué, comme une échéance récurrente, en confirmant la date réelle et le montant transféré ; ces informations sont historisées et le pointage ne change pas à lui seul le disponible.
+- Une contribution déjà pointée ne peut pas être pointée une seconde fois ; toute correction passe par une action explicite et auditée.
 - Une sortie payée après le dernier instantané de solde reste déduite jusqu'à la saisie d'un nouveau solde qui l'intègre. Le marquage du virement de participation comme effectué ne modifie pas à lui seul le disponible prévisionnel.
 - Une dépense de courses commune diminue le budget courses, pas le disponible personnel.
 - Le budget courses est initialisé à 490 €/mois et configurable.
