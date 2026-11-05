@@ -1,6 +1,6 @@
 # Modèle de données — Suivi des dépenses
 
-**Version :** 0.3  
+**Version :** 0.4  
 **Statut :** Modèle conceptuel aligné sur les règles métier validées  
 **Backend cible :** Python 3.12 / FastAPI / SQLAlchemy 2  
 **Base :** PostgreSQL
@@ -23,6 +23,7 @@
 |---|---|
 | Comptes | users, households, household_members |
 | Solde personnel | personal_balance_entries |
+| Contributions foyer | household_contributions |
 | Transactions | categories, transactions |
 | Charges | recurring_expenses, recurring_occurrences |
 | Prévisions | planned_expenses |
@@ -50,7 +51,7 @@ Historise les saisies manuelles du solde du compte courant personnel.
 | note | TEXT | nullable |
 | created_at | TIMESTAMPTZ | NOT NULL |
 
-Le solde courant de référence est la dernière saisie du propriétaire. Chaque nouvelle saisie remplace la référence pour les calculs futurs, sans supprimer l'historique. Aucun compte bancaire externe ou compte joint n'est modélisé en V1.
+Le solde courant de référence est la dernière saisie du propriétaire. Chaque nouvelle saisie constitue un instantané daté : les opérations antérieures ou égales à `recorded_at` sont réputées déjà reflétées dans le solde ; les sorties postérieures restent à déduire, même si elles sont marquées payées. Une nouvelle saisie remplace la référence pour les calculs futurs, sans supprimer l'historique. Aucun compte bancaire externe ou compte joint n'est modélisé en V1.
 
 ## 5. categories
 
@@ -193,23 +194,41 @@ Une charge commune est imputée à chaque membre selon son pourcentage. Pour le 
 
 La contribution mensuelle au budget courses (55 % de 490 €, soit 269,50 € pour l'utilisateur et 220,50 € pour l'autre membre) peut être représentée comme un engagement récurrent commun distinct, intégré à la ligne Participation au foyer. Les achats de courses ne sont ensuite imputés qu'au budget courses : ils ne diminuent jamais le disponible personnel une seconde fois.
 
-## 12. Calcul du disponible prévisionnel
+## 12. household_contributions
+
+Suit le virement mensuel de participation au foyer de chaque membre. La contribution inclut la quote-part des charges communes et la contribution à l'enveloppe courses.
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| household_id | UUID | FK households, NOT NULL |
+| user_id | UUID | FK users, membre contributeur |
+| period_start | DATE | premier jour du mois |
+| amount_cents | BIGINT | montant de contribution figé pour la période |
+| allocation_percentage | NUMERIC(6,3) | pourcentage appliqué, instantané historique |
+| status | VARCHAR(20) | pending / transferred / cancelled |
+| transferred_at | TIMESTAMPTZ nullable | date/heure de confirmation du virement |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+Contrainte UNIQUE (household_id, user_id, period_start). Le statut `transferred` signifie que l'utilisateur confirme avoir effectué le virement ; il ne signifie pas que la sortie est déjà incluse dans le dernier solde personnel saisi. Une contribution transférée après `personal_balance_entries.recorded_at` reste déduite du disponible jusqu'à la prochaine saisie de solde. Une contribution transférée avant ou à cette date est déjà reflétée dans le solde et est exclue.
+
+## 13. Calcul du disponible prévisionnel
 
 Le backend calcule pour un mois donné :
 
-`available_forecast_cents = latest_personal_balance_cents - personal_recurring_due_cents - household_share_due_cents - personal_planned_expenses_cents`
+`available_forecast_cents = latest_personal_balance_cents - personal_outflows_after_snapshot_cents - household_contributions_not_reflected_cents - personal_planned_expenses_not_reflected_cents`
 
-Les sommes incluent uniquement les échéances à venir et non payées à la date de référence. Les charges communes sont agrégées en une seule valeur pour le tableau de bord. Les achats de courses communes sont exclus du calcul personnel.
+Le calcul utilise `recorded_at` comme date de coupure. Toute sortie effectivement payée après cet instantané est déduite, même si son statut est `paid` ou `transferred`. Une sortie payée avant ou à l'instantané est exclue, car elle est déjà intégrée au solde. Les engagements non payés restant dus sont également déduits. Les charges communes sont agrégées dans une seule ligne « Participation au foyer ». Les achats de courses communes restent exclus du calcul personnel : seule la contribution au budget courses est incluse dans la participation.
 
-Le solde saisi est déjà net des opérations bancaires réellement passées. Toute occurrence ou dépense marquée payée est donc exclue des déductions futures.
+Le statut de paiement et l'inclusion dans l'instantané bancaire sont deux notions distinctes. Marquer un virement comme effectué ne modifie donc pas le disponible à lui seul ; une nouvelle saisie du solde après le virement actualise la base et fait disparaître la déduction correspondante sans double comptage.
 
 Le calcul ne comprend aucun revenu attendu. Le solde négatif est autorisé et affiché explicitement.
 
-## 13. Audit et fonctions annexes
+## 14. Audit et fonctions annexes
 
 Les opérations financières sensibles sont auditées : création/modification/suppression de charges, modification des répartitions, saisie du solde, paiement d'une occurrence et modification d'une dépense prévue. Les notifications, imports et exports respectent les mêmes permissions que les données sources.
 
-## 14. Contraintes et index
+## 15. Contraintes et index
 
 - Montants > 0 pour dépenses ; solde personnel signé.
 - Pourcentages entre 0 et 100 et totalisant 100 % par règle.
@@ -220,13 +239,16 @@ Les opérations financières sensibles sont auditées : création/modification/s
 - Une transaction personnelle ne peut pas référencer un budget du foyer.
 - Les règles de périmètre sont validées côté service et en base lorsque possible.
 
-## 15. Tests métier indispensables
+## 16. Tests métier indispensables
 
 - Solde manuel et horodatage.
 - Charges personnelles fixes et variables.
 - Calcul de la quote-part 55/45 et règles spécifiques.
 - Agrégation de toutes les charges communes dans une seule ligne.
-- Exclusion des charges payées.
+- Exclusion des sorties payées avant ou à l'instantané de solde.
+- Inclusion des sorties payées après l'instantané jusqu'à la prochaine saisie de solde.
+- Marquage du virement de participation effectué sans variation artificielle du disponible.
+- Nouvelle saisie de solde après virement sans double déduction.
 - Exclusion des revenus futurs.
 - Exclusion des achats courses communes du disponible personnel.
 - Déduction d'une dépense courses commune du budget de 490 €.
