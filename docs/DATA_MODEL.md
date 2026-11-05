@@ -211,10 +211,12 @@ Suit le virement mensuel de participation au foyer de chaque membre. La contribu
 | amount_cents | BIGINT | montant de contribution figé pour la période |
 | allocation_percentage | NUMERIC(6,3) | pourcentage appliqué, instantané historique |
 | status | VARCHAR(20) | pending / transferred / cancelled |
-| transferred_at | TIMESTAMPTZ nullable | date/heure de confirmation du virement |
+| transferred_at | TIMESTAMPTZ nullable | date/heure réelle du virement confirmé |
+| transferred_amount_cents | BIGINT nullable | montant réellement transféré, positif |
+| transaction_id | UUID nullable | FK transactions, UNIQUE, transaction réelle du virement |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Contrainte UNIQUE (household_id, user_id, period_start). Le statut `transferred` signifie que l'utilisateur confirme avoir effectué le virement ; il ne signifie pas que la sortie est déjà incluse dans le dernier solde personnel saisi. Une contribution transférée après `personal_balance_entries.recorded_at` reste déduite du disponible jusqu'à la prochaine saisie de solde. Une contribution transférée avant ou à cette date est déjà reflétée dans le solde et est exclue.
+Contrainte UNIQUE (household_id, user_id, period_start). Le statut `transferred` signifie que l'utilisateur a pointé le virement comme une échéance récurrente, en confirmant `transferred_at` et `transferred_amount_cents` ; la transaction réelle associée est unique et le pointage est idempotent. Il ne signifie pas que la sortie est déjà incluse dans le dernier solde personnel saisi. Une contribution transférée après `personal_balance_entries.recorded_at` reste déduite du disponible jusqu'à la prochaine saisie de solde. Une contribution transférée avant ou à cette date est déjà reflétée dans le solde et est exclue.
 
 ## 13. Calcul du disponible prévisionnel
 
