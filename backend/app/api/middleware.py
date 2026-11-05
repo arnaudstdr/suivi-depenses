@@ -57,4 +57,34 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = request_id
         if request.url.path.startswith("/api/v1"):
             response.headers.setdefault("Cache-Control", "no-store")
+        _apply_security_headers(
+            response,
+            path=request.url.path,
+            production=bool(getattr(request.app.state.settings, "is_production", False)),
+        )
         return response
+
+
+def _apply_security_headers(
+    response: Response,
+    *,
+    path: str,
+    production: bool,
+) -> None:
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "geolocation=(), microphone=(), camera=()",
+    )
+    if path.startswith("/api/v1") or path.startswith("/health"):
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+        )
+    if production:
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
