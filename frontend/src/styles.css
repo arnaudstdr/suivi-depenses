@@ -20,3 +20,9 @@
 .grocery-note svg{flex:none;margin-top:1px}
 .form-hint{background:var(--primary-soft);color:var(--primary-dark);border-radius:8px;padding:10px 11px;font-size:10px;line-height:1.5;margin:10px 0}
 @media(prefers-color-scheme:dark){.deduction-copy strong,.deduction-row>strong{color:#eee9f2}.form-hint{color:#d9c8ed}}
+
+.contribution-action{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.contribution-action>span{font-size:10px;font-weight:700;color:var(--text)}
+.contribution-action .text-link{padding:0}
+.contribution-action .form-hint{margin:0;width:100%}
+.status-paid{color:var(--success,#23865b)!important}
