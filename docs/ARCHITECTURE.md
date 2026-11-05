@@ -321,7 +321,7 @@ La stratégie retenue comme proposition est une approche 3-2-1 : trois copies, d
 
 - **Base PostgreSQL :** sauvegarde logique quotidienne avec `pg_dump` au format custom, cohérente et restaurable indépendamment du conteneur.
 - **Fichiers applicatifs :** sauvegarde quotidienne des fichiers importés et des données persistantes nécessaires. Les fichiers temporaires et caches reconstruisibles sont exclus.
-- **Copie locale :** dépôt chiffré sur un second disque USB, distinct du SSD système et de la base active.
+- **Copie locale :** dépôt chiffré sur un second disque USB, distinct du SSD système et de la base active. Le Raspberry Pi 5 fonctionne déjà sur SSD ; un second disque USB dédié aux sauvegardes sera ajouté.
 - **Copie distante :** réplication chiffrée hors site vers le kDrive Infomaniak de l'utilisateur, via Restic et rclone (backend WebDAV). kDrive ne disposant pas d'un backend Restic natif, cette intégration doit être validée par des tests de sauvegarde, de vérification et de restauration avant d'être considérée opérationnelle. Infomaniak indique que WebDAV est destiné à des usages spécifiques et ne garantit pas le support des logiciels tiers ; cette copie ne doit donc pas être l'unique sauvegarde.
 - **Rétention proposée :** 7 sauvegardes quotidiennes, 4 hebdomadaires et 12 mensuelles pour PostgreSQL ; 30 jours pour les fichiers applicatifs, avec ajustement selon le volume. Appliquer une politique de rétention cohérente au dépôt Restic distant.
 - **Sécurité :** chiffrement Restic avant transfert ; mot de passe et clé de récupération conservés hors du Raspberry Pi, dans un gestionnaire de mots de passe ou un support sécurisé.
@@ -375,8 +375,8 @@ Les endpoints de santé ne révèlent aucune information d'infrastructure au pub
 1. **Hébergement cible :** VPS personnel, NAS ou autre plateforme ; cela conditionne les détails TLS, sauvegardes et supervision.
 2. **Monitoring :** Sentry retenu, avec filtrage strict des données sensibles.
 3. **Stockage des fichiers :** volume Docker privé en V1 ; stockage objet seulement si les volumes le justifient.
-4. **Sauvegardes :** politique 3-2-1 avec copie distante sur kDrive via rclone/WebDAV, sous réserve de tests de compatibilité et de restauration.
+4. **Sauvegardes :** politique 3-2-1 avec SSD système existant, second disque USB dédié et copie distante sur kDrive via rclone/WebDAV, sous réserve de tests de compatibilité et de restauration.
 
 ---
 
-**Fin — ARCHITECTURE.md v0.3**
+**Fin — ARCHITECTURE.md v0.4**
