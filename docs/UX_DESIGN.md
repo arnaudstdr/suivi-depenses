@@ -1,7 +1,7 @@
 # UX Design — Suivi des dépenses
 
-**Version :** 0.1  
-**Statut :** Direction UX validée, écrans à détailler  
+**Version :** 0.2  
+**Statut :** Direction UX et style visuel validés, maquette à réaliser  
 **Direction retenue :** application de gestion budgétaire avec tableaux, indicateurs et graphiques, privilégiant la lisibilité et la rapidité d'action.
 
 ## 1. Principes UX
@@ -23,17 +23,20 @@ Principes directeurs :
 ### 2.1 Style
 
 - Interface sobre, contemporaine et fonctionnelle.
-- Fond clair légèrement cassé, surfaces blanches, bordures discrètes.
-- Couleur primaire sobre (bleu profond ou indigo) réservée aux actions et éléments interactifs.
+- Apparence adaptative : thème clair ou sombre selon le préférence système, avec possibilité de bascule manuelle ultérieure si nécessaire.
+- En thème clair : fond légèrement cassé, surfaces blanches et bordures discrètes.
+- En thème sombre : fond anthracite, surfaces foncées différenciées et contrastes contrôlés.
+- Violet comme couleur primaire, réservé aux actions principales, liens actifs et éléments interactifs.
 - Vert réservé aux situations favorables, orange aux alertes et rouge aux dépassements ou erreurs.
 - Typographie sans-serif très lisible.
 - Graphiques simples, avec légendes explicites et valeurs accessibles.
 - Pas de dégradés décoratifs, d'ombres lourdes ou de cartes excessivement arrondies.
 
-La palette exacte, les tokens et les composants seront arrêtés dans la maquette.
+La palette détaillée et les tokens seront définis dans la maquette. Les couleurs de statut (vert, orange, rouge) restent indépendantes du violet primaire.
 
 ### 2.2 Densité
 
+- Densité équilibrée : informations utiles visibles sans compacter les lignes ni surcharger les cartes.
 - Desktop : densité modérée, grille de 12 colonnes, navigation latérale persistante.
 - Mobile : une colonne, navigation basse, cartes empilées et tableaux convertis en lignes/cartes.
 - Les montants utilisent le format français et sont alignés visuellement.
@@ -199,6 +202,12 @@ L'interface ne doit jamais déduire qu'une donnée est visible parce qu'elle est
 
 La maquette utilisera uniquement des données fictives et cohérentes entre les écrans.
 
+### Préférences visuelles validées
+
+- Apparence : adaptative, suit le thème clair/sombre du système.
+- Couleur principale : violet.
+- Densité : équilibrée.
+
 Exemples de catégories :
 - Alimentation
 - Logement
@@ -229,4 +238,4 @@ La maquette est une interface de démonstration navigable, sans authentification
 
 ---
 
-**Fin — UX_DESIGN.md v0.1**
+**Fin — UX_DESIGN.md v0.2**
