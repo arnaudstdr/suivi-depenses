@@ -1,8 +1,8 @@
 # Design UX — Suivi des dépenses
 
-**Version :** 0.4  
+**Version :** 0.5  
 **Statut :** Direction UX validée, maquette à aligner  
-**Référence métier :** SPECIFICATIONS.md v0.3
+**Référence métier :** SPECIFICATIONS.md v0.4
 
 ## 1. Principes
 
@@ -23,15 +23,16 @@ Ordre de lecture :
 
 1. **Disponible prévisionnel** en très grand, premier indicateur.
 2. Solde bancaire personnel saisi manuellement, avec date de dernière mise à jour et action « Mettre à jour le solde ».
-3. Détail des déductions :
+3. Participation au foyer, avec montant à virer et statut « À effectuer » / « Virement effectué ». L'action de confirmation ne retire pas la déduction du disponible.
+4. Détail des déductions :
    - charges personnelles restantes ;
    - participation au foyer (une seule ligne agrégée) ;
    - dépenses personnelles ponctuelles prévues.
-4. Budget courses du foyer : enveloppe, consommé, restant.
-5. Prochaines échéances récurrentes.
-6. Dernières dépenses personnelles.
+5. Budget courses du foyer : enveloppe, consommé, restant.
+6. Prochaines échéances récurrentes.
+7. Dernières dépenses personnelles.
 
-Le calcul du disponible exclut les revenus futurs et les achats de courses communes. Une dépense payée n'est pas déduite une seconde fois.
+Le solde saisi est un instantané daté. Les sorties postérieures à cet instantané restent déduites même après leur paiement ; elles disparaissent du prévisionnel lors de la saisie d'un nouveau solde qui les intègre. Les sorties antérieures à l'instantané ne sont pas déduites. Les revenus futurs et les achats de courses communes sont exclus.
 
 ### Wireframe
 
@@ -45,6 +46,7 @@ Le calcul du disponible exclut les revenus futurs et les achats de courses commu
 │                                                                   │
 │ Charges personnelles restantes        - 250,00 €                 │
 │ Participation au foyer                - 300,00 €                 │
+│ Virement de participation : À effectuer                           │
 │ Dépenses ponctuelles prévues           - 107,50 €                 │
 │                                                                   │
 │ BUDGET COURSES DU FOYER                                            │
@@ -58,7 +60,7 @@ Le calcul du disponible exclut les revenus futurs et les achats de courses commu
 
 Le tableau de bord Personnel n'affiche qu'une seule ligne agrégée. Le détail est disponible dans l'écran Charges / Récurrences.
 
-La vue détaillée permet de voir chaque charge commune, le montant total, le pourcentage de chacun et la part individuelle. Répartition par défaut actuelle : 55 % / 45 %, modifiable globalement et par charge.
+La vue détaillée permet de voir chaque charge commune, le montant total, le pourcentage de chacun et la part individuelle. La contribution aux courses (269,50 € pour la part initiale de 55 %) est incluse dans le total de participation. L'utilisateur marque explicitement son virement comme effectué après l'avoir réalisé ; cette action change le statut, pas le montant du disponible. Répartition par défaut actuelle : 55 % / 45 %, modifiable globalement et par charge.
 
 ## 4. Budget courses
 
