@@ -124,11 +124,15 @@ La réponse complète contient aussi `deductions.total_cents`, `grocery_budget` 
 | PUT | `/recurring-expenses/{id}/allocation-rule` | Définir une règle spécifique à une charge commune |
 | DELETE | `/recurring-expenses/{id}/allocation-rule` | Revenir à la règle par défaut |
 | GET | `/households/me/contributions?period=YYYY-MM` | Lire les contributions de la période |
+| GET | `/households/me/contributions/history?date_from=YYYY-MM&date_to=YYYY-MM` | Lire l'historique conservé des contributions |
 | POST | `/households/me/contributions/{contribution_id}/mark-transferred` | Pointer son propre virement avec sa date et son montant réels |
+| POST | `/households/me/contributions/{contribution_id}/correct-transfer` | Corriger explicitement un virement déjà pointé |
 
 La règle par défaut contient 100 % pour le propriétaire tant qu'il est seul, puis passe à 55/45 à l'arrivée du second membre. Les pourcentages sont exprimés en points, totalisent exactement 100 et sont répartis au centime avec la méthode du plus fort reste. Une règle spécifique ne s'applique qu'à une charge récurrente commune.
 
-La contribution mensuelle agrège la part du membre dans les charges communes et sa contribution au budget courses. Elle se pointe comme une échéance récurrente : le corps de la requête accepte `transferred_at`, `transferred_amount_cents` et une note facultative. Le serveur passe de `pending` à `transferred`, associe une transaction personnelle unique de catégorie « Participation au foyer » et journalise l'opération. Cette transaction est exclue des déductions de transactions personnelles pour éviter un double comptage. Le pointage est idempotent ; une correction ultérieure est explicite et auditée. Cette action ne modifie pas à elle seule le disponible : si le virement est postérieur au dernier instantané de solde, son montant reste déduit. Une nouvelle saisie du solde après le virement l'intègre et supprime alors la déduction, sans double comptage. Chaque membre ne peut pointer que sa propre contribution.
+La contribution mensuelle agrège la part du membre dans les charges communes et sa contribution au budget courses. Elle se pointe comme une échéance récurrente : le corps de la requête accepte `transferred_at`, `transferred_amount_cents` et une note facultative. Le serveur passe de `pending` à `transferred`, associe une transaction personnelle unique de catégorie « Participation au foyer » et journalise l'opération. Cette transaction est exclue des déductions de transactions personnelles pour éviter un double comptage. Le pointage est idempotent ; une correction ultérieure est explicite et auditée via `correct-transfer`, qui met à jour la contribution et sa transaction liée. Cette action ne modifie pas à elle seule le disponible : si le virement est postérieur au dernier instantané de solde, son montant reste déduit. Une nouvelle saisie du solde après le virement l'intègre et supprime alors la déduction, sans double comptage. Chaque membre ne peut pointer ou corriger que sa propre contribution.
+
+Une contribution d'une période passée déjà matérialisée n'est plus recalculée : une modification de règle ne réécrit pas l'historique. L'endpoint `/history` expose les contributions conservées, filtrables par mois et paginées.
 
 ## 6. Transactions
 
@@ -174,15 +178,18 @@ Règles :
 | PATCH | `/recurring-expenses/{id}` | Modifier |
 | POST | `/recurring-expenses/{id}/deactivate` | Désactiver |
 | GET | `/recurring-expenses/{id}/occurrences?period=YYYY-MM&status=...` | Échéances générées pour la période |
+| POST | `/recurring-occurrences/{occurrence_id}/confirm-amount` | Confirmer le montant d'une échéance variable |
+| POST | `/recurring-occurrences/{occurrence_id}/skip` | Ignorer une échéance avec motif facultatif |
 | POST | `/recurring-occurrences/{occurrence_id}/mark-paid` | Pointer une échéance comme payée |
+| POST | `/recurring-occurrences/{occurrence_id}/correct-payment` | Corriger explicitement un paiement déjà pointé |
 
 Champs de création : `label`, `amount_cents`, `category_id`, `scope` (personal/shared), `frequency` (`weekly`, `monthly`, `quarterly`, `semiannual`, `yearly`), `start_date`, `end_date`, `due_day`, `amount_is_variable`. Une charge fixe exige `amount_cents`. Une règle de répartition spécifique peut être définie via `PUT /recurring-expenses/{id}/allocation-rule`.
 
-Les occurrences sont générées à la demande pour la période demandée, de manière idempotente. Le jour d'échéance est ramené au dernier jour du mois si nécessaire. Une charge désactivée ne génère plus de nouvelles occurrences.
+Les occurrences sont générées de manière idempotente pour la période demandée, avec une contrainte d'unicité et une insertion `ON CONFLICT DO NOTHING`. La génération est déclenchée automatiquement à la lecture du tableau de bord et des contributions, ainsi que par la commande `python -m app.cli recurring generate --period YYYY-MM` pour une exécution planifiée. Le jour d'échéance est ramené au dernier jour du mois si nécessaire. Une charge désactivée ne génère plus de nouvelles occurrences.
 
 Une charge commune est répartie selon les pourcentages configurés. La part de l'utilisateur connecté est agrégée avec les autres charges communes dans la ligne « Participation au foyer » du tableau de bord personnel. Les détails par charge sont accessibles dans l'écran Charges.
 
-Le pointage d'une occurrence se fait explicitement après le paiement réel. Le corps de `POST /recurring-occurrences/{occurrence_id}/mark-paid` accepte `paid_at`, `payment_amount_cents` et une note facultative. Le serveur passe l'occurrence à `paid`, crée une transaction réelle liée de manière idempotente et journalise l'opération. Pour une charge variable, `payment_amount_cents` est obligatoire ; pour une charge fixe, il est proposé à partir du montant attendu et peut être corrigé. Le montant payé après le dernier instantané de solde reste déduit du disponible jusqu'à une nouvelle saisie du solde. Une échéance déjà payée n'est pas repointée : la seconde demande renvoie l'occurrence existante.
+Le pointage d'une occurrence se fait explicitement après le paiement réel. Le corps de `POST /recurring-occurrences/{occurrence_id}/mark-paid` accepte `paid_at`, `payment_amount_cents` et une note facultative. Le serveur passe l'occurrence à `paid`, crée une transaction réelle liée de manière idempotente et journalise l'opération. Pour une charge variable, `payment_amount_cents` est obligatoire sauf si un montant a déjà été confirmé via `confirm-amount` ; pour une charge fixe, il est proposé à partir du montant attendu et peut être corrigé. Le montant payé après le dernier instantané de solde reste déduit du disponible jusqu'à une nouvelle saisie du solde. Une échéance déjà payée n'est pas repointée : la seconde demande renvoie l'occurrence existante. Toute correction passe par `correct-payment`, qui met à jour l'occurrence et la transaction liée dans la même transaction SQL et journalise les anciennes et nouvelles valeurs. Une occurrence `skipped` est exclue des déductions et des contributions ; elle conserve son motif et son horodatage. Une transaction liée à une occurrence, une dépense prévue ou une contribution ne peut pas être modifiée ou supprimée directement via `/transactions` : la correction doit passer par l'élément source.
 
 ## 8. Dépenses ponctuelles prévues
 
@@ -192,11 +199,12 @@ Le pointage d'une occurrence se fait explicitement après le paiement réel. Le 
 | POST | `/planned-expenses` | Créer une prévision |
 | PATCH | `/planned-expenses/{id}` | Modifier |
 | POST | `/planned-expenses/{id}/mark-paid` | Marquer payée |
+| POST | `/planned-expenses/{id}/correct-payment` | Corriger explicitement un paiement déjà pointé |
 | DELETE | `/planned-expenses/{id}` | Annuler |
 
 Statuts disponibles : `planned`, `committed`, `paid`, `cancelled`. Les statuts `planned` et `committed` sont déduits. Une dépense personnelle prévue ou engagée est déduite. Si elle est payée après le dernier instantané de solde, elle reste déduite jusqu'à la prochaine saisie du solde ; si elle est payée avant l'instantané, elle est exclue. Une dépense commune hors courses est répartie et agrégée dans la participation au foyer. Une dépense commune de courses consomme uniquement le budget courses au moment du paiement.
 
-`POST /planned-expenses/{id}/mark-paid` accepte `paid_at`, `payment_amount_cents` facultatif et une note. Le pointage est idempotent et crée une transaction liée. `DELETE /planned-expenses/{id}` annule la dépense ; une dépense déjà payée ne peut pas être annulée.
+`POST /planned-expenses/{id}/mark-paid` accepte `paid_at`, `payment_amount_cents` facultatif et une note. Le pointage est idempotent et crée une transaction liée. `DELETE /planned-expenses/{id}` annule la dépense ; une dépense déjà payée ne peut pas être annulée. `POST /planned-expenses/{id}/correct-payment` corrige explicitement le montant et la date d'une dépense payée en mettant à jour sa transaction liée, avec audit des valeurs précédentes.
 
 ## 9. Budget courses du foyer
 

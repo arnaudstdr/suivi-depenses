@@ -217,14 +217,17 @@ Pour une charge shared, la règle de répartition sera résolue à partir de la 
 | due_date | DATE | NOT NULL |
 | expected_amount_cents | BIGINT nullable | montant attendu |
 | confirmed_amount_cents | BIGINT nullable | montant confirmé |
+| confirmed_at | TIMESTAMPTZ nullable | instant de la confirmation du montant |
 | status | VARCHAR(30) | pending / confirmed / paid / skipped |
 | paid_at | TIMESTAMPTZ nullable | date/heure réelle du paiement pointé |
 | payment_amount_cents | BIGINT nullable | montant réellement payé, notamment pour montant variable |
 | payment_note | TEXT nullable | note ou motif de correction |
+| skipped_at | TIMESTAMPTZ nullable | instant où l'échéance a été ignorée |
+| skip_reason | TEXT nullable | motif facultatif de l'échéance ignorée |
 | transaction_id | UUID nullable | FK transactions, UNIQUE |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Contrainte UNIQUE (recurring_expense_id, due_date). La génération des occurrences est idempotente pour une période demandée. Le pointage `paid` renseigne `paid_at`, confirme `payment_amount_cents`, crée ou associe une transaction réelle, renseigne son `paid_at` et lie les deux enregistrements. Le pointage est idempotent : une seconde demande ne crée pas une deuxième transaction. Toute correction d'un paiement déjà pointé est une opération explicite et auditée. Les statuts `confirmed` et `skipped` sont supportés par le modèle ; l'API de la tranche 4.2 expose le pointage payé.
+Contrainte UNIQUE (recurring_expense_id, due_date). La génération des occurrences est idempotente pour une période demandée, y compris sous accès concurrent, via `INSERT ... ON CONFLICT DO NOTHING`. Elle est déclenchée par la lecture des échéances, du tableau de bord et des contributions, ainsi que par la commande CLI planifiable. Le pointage `paid` renseigne `paid_at`, confirme `payment_amount_cents`, crée ou associe une transaction réelle, renseigne son `paid_at` et lie les deux enregistrements. Le pointage est idempotent : une seconde demande ne crée pas une deuxième transaction. Toute correction d'un paiement déjà pointé est une opération explicite et auditée (`correct-payment`) qui met à jour l'occurrence et sa transaction liée dans la même transaction SQL. Le statut `confirmed` fige un montant variable avant pointage ; le statut `skipped` exclut l'échéance des déductions et des contributions, avec horodatage et motif conservés.
 
 ## 9. planned_expenses
 
@@ -305,7 +308,9 @@ Suit le virement mensuel de participation au foyer de chaque membre. La contribu
 | transaction_id | UUID nullable | FK transactions, UNIQUE, transaction réelle du virement |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Contrainte UNIQUE (household_id, user_id, period_start). Le statut `transferred` signifie que l'utilisateur a pointé le virement comme une échéance récurrente, en confirmant `transferred_at` et `transferred_amount_cents` ; la transaction réelle associée est unique et le pointage est idempotent. Il ne signifie pas que la sortie est déjà incluse dans le dernier solde personnel saisi. Une contribution transférée après `personal_balance_entries.recorded_at` reste déduite du disponible jusqu'à la prochaine saisie de solde. Une contribution transférée avant ou à cette date est déjà reflétée dans le solde et est exclue.
+Contrainte UNIQUE (household_id, user_id, period_start). Le statut `transferred` signifie que l'utilisateur a pointé le virement comme une échéance récurrente, en confirmant `transferred_at` et `transferred_amount_cents` ; la transaction réelle associée est unique et le pointage est idempotent. Il ne signifie pas que la sortie est déjà incluse dans le dernier solde personnel saisi. Une contribution transférée après `personal_balance_entries.recorded_at` reste déduite du disponible jusqu'à la prochaine saisie de solde. Une contribution transférée avant ou à cette date est déjà reflétée dans le solde et est exclue. Une correction de virement passe par une action explicite et auditée (`correct-transfer`) qui met à jour la contribution et sa transaction liée.
+
+Une contribution d'une période passée déjà matérialisée est figée : les lectures suivantes ne recalculent plus son montant ni son pourcentage. Une modification de règle ne réécrit donc pas les périodes passées. La première lecture d'une période passée jamais matérialisée crée la ligne avec les données disponibles à cet instant, puis la fige.
 
 La transaction du virement est une transaction personnelle de catégorie « Participation au foyer ». Elle est liée à la contribution et doit être exclue des déductions de transactions personnelles lors du calcul du disponible, afin de ne pas compter deux fois la participation. `allocation_percentage` conserve le pourcentage par défaut du membre comme référence historique ; le montant peut refléter des règles spécifiques par charge.
 
@@ -333,7 +338,7 @@ Le calcul ne comprend aucun revenu attendu. Le solde négatif est autorisé et a
 
 ## 14. Audit et fonctions annexes
 
-Les opérations financières sensibles sont auditées : création/modification/suppression de charges, modification des répartitions, saisie du solde, paiement d'une occurrence et modification d'une dépense prévue. Les notifications, imports et exports respectent les mêmes permissions que les données sources.
+Les opérations financières sensibles sont auditées : création/modification/suppression de charges, modification des répartitions avec pourcentages avant/après, saisie du solde, confirmation/pointage/skip/correction d'une occurrence, pointage et correction d'une contribution, modification et correction d'une dépense prévue. Les transactions liées à une occurrence, une dépense prévue ou une contribution ne peuvent pas être modifiées ou supprimées directement : la correction doit passer par l'élément source, ce qui garantit la cohérence de l'historique. Les notifications, imports et exports respectent les mêmes permissions que les données sources.
 
 ## 15. Contraintes et index
 

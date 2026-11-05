@@ -157,16 +157,19 @@ Endpoints ajoutés :
 - `GET/PATCH /api/v1/recurring-expenses/{id}`
 - `POST /api/v1/recurring-expenses/{id}/deactivate`
 - `GET /api/v1/recurring-expenses/{id}/occurrences?period=YYYY-MM`
+- `POST /api/v1/recurring-occurrences/{id}/confirm-amount`
+- `POST /api/v1/recurring-occurrences/{id}/skip`
 - `POST /api/v1/recurring-occurrences/{id}/mark-paid`
+- `POST /api/v1/recurring-occurrences/{id}/correct-payment`
 
 Règles principales :
 
-- Les occurrences sont générées à la demande pour une période, de façon
-  idempotente, avec unicité `(recurring_expense_id, due_date)`.
+- Les occurrences sont générées de façon idempotente, y compris sous accès
+  concurrent, avec unicité `(recurring_expense_id, due_date)`.
 - Les fréquences `weekly`, `monthly`, `quarterly`, `semiannual` et `yearly` sont
   supportées. Un jour d'échéance trop grand est ramené au dernier jour du mois.
 - Une charge fixe exige un montant. Une charge variable exige un montant réel
-  au pointage.
+  au pointage, sauf si un montant a déjà été confirmé.
 - Le pointage crée une transaction dans la même transaction SQL et lie les deux
   enregistrements de façon unique. Un second pointage renvoie l'existant.
 - Une dépense prévue payée crée aussi une transaction unique et idempotente.
@@ -233,6 +236,36 @@ Règles de calcul :
   de solde, et exclue sinon.
 - Les achats de courses communes ne sont jamais déduits du disponible personnel.
 - Une nouvelle saisie de solde réinitialise les déductions déjà reflétées.
+
+## Phase 5 — récurrences et historique
+
+La migration `0006_occurrence_history` ajoute `confirmed_at`, `skipped_at` et
+`skip_reason` aux occurrences, ainsi qu'un index d'historique sur l'audit.
+
+Endpoints ajoutés :
+
+- `GET /api/v1/households/me/contributions/history`
+- `POST /api/v1/households/me/contributions/{id}/correct-transfer`
+- `POST /api/v1/planned-expenses/{id}/correct-payment`
+
+Règles principales :
+
+- La génération des échéances est déclenchée par la lecture du tableau de bord,
+  des contributions et des occurrences. La commande
+  `uv run python -m app.cli recurring generate --period YYYY-MM` permet une
+  exécution planifiée, sans Celery ni Redis.
+- Une occurrence variable peut être confirmée avant pointage. Le pointage
+  utilise alors le montant confirmé si le montant réel n'est pas fourni.
+- Une occurrence peut être ignorée avec un motif facultatif ; elle est exclue
+  des déductions et des contributions.
+- Un paiement d'occurrence, une dépense prévue payée ou un virement de
+  contribution se corrige explicitement via son endpoint source. La correction
+  met à jour la transaction liée dans la même transaction SQL et conserve les
+  anciennes valeurs dans l'audit.
+- Les transactions liées ne peuvent pas être modifiées ou supprimées via
+  `/api/v1/transactions`.
+- Une contribution d'une période passée déjà matérialisée est figée : une
+  modification de règle ne réécrit pas l'historique.
 
 ## Contrôles
 
