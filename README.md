@@ -34,7 +34,7 @@ Les achats enregistrés comme courses communes diminuent uniquement l'enveloppe 
 
 ## État du projet
 
-Projet en phase de conception et de maquette UX. Le frontend actuel est une maquette avec données fictives ; il ne constitue pas encore une application connectée à un backend.
+La conception fonctionnelle et la maquette UX sont validées. Le dépôt entre en phase d'implémentation ; le frontend actuel reste une maquette avec données fictives et ne constitue pas encore une application connectée à un backend.
 
 ## Documentation
 
@@ -48,4 +48,4 @@ Projet en phase de conception et de maquette UX. Le frontend actuel est une maqu
 
 ## Prochaine étape
 
-Finaliser et valider la maquette React avant de créer `AGENTS.md` et de commencer le backend.
+Démarrer l'implémentation par la mise en place du socle backend et de son environnement de développement, en suivant `AGENTS.md` et `docs/ROADMAP.md`.
