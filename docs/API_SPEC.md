@@ -228,7 +228,9 @@ Une transaction commune de catégorie courses diminue le budget restant d'une se
 | PUT | `/households/{household_id}/allocation-rules/default` | Définir 55/45 ou autre |
 | PUT | `/recurring-expenses/{id}/allocation-rule` | Définir une exception |
 
-Chaque règle contient un pourcentage par membre et doit totaliser exactement 100 %. Les règles spécifiques priment sur la règle par défaut. Les changements s'appliquent aux échéances futures, sans recalcul silencieux de l'historique.
+Chaque règle contient un pourcentage par membre. Avec deux membres, la somme doit totaliser exactement 100 %. Avec un seul membre, une part inférieure à 100 % est acceptée ; la part non attribuée n'est pas suivie dans les contributions. Les règles spécifiques priment sur la règle par défaut. Les changements s'appliquent aux échéances futures, sans recalcul silencieux de l'historique.
+
+Lorsque le second membre rejoint le foyer, la part personnalisée du premier membre est conservée et le complément est attribué au second. Si la règle était restée à 100 %, elle devient automatiquement 55/45.
 
 ## 11. Réponses et erreurs
 

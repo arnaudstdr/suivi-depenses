@@ -94,7 +94,7 @@ Une charge personnelle est déduite à 100 % du disponible personnel lorsqu'elle
 
 Une charge commune est répartie selon les pourcentages configurés. La répartition par défaut actuelle est 55 % pour l'utilisateur et 45 % pour l'autre membre ; elle doit être modifiable.
 
-La somme des pourcentages doit être égale à 100 %.
+La somme des pourcentages doit être égale à 100 % lorsque le foyer compte deux membres. Avec un seul membre actif, une part inférieure à 100 % est autorisée : la part non attribuée n'est suivie dans aucune contribution.
 
 Sur le tableau de bord Personnel, toutes les parts personnelles des charges communes restant à financer sont regroupées dans une seule ligne « Participation au foyer ». Le détail reste consultable dans la vue Charges/Récurrences.
 
@@ -171,6 +171,8 @@ Les récurrences génèrent des échéances de manière idempotente. Chaque occu
 ## 12. Répartition
 
 Répartition par défaut : 55 % / 45 %. Chaque charge commune peut utiliser la répartition par défaut ou une règle spécifique. Les calculs sont effectués au centime, avec arrondi déterministe. Une modification de la règle ne réécrit pas les périodes passées.
+
+Avec un seul membre actif, sa part peut être fixée manuellement entre 0 et 100 %. La part non attribuée n'est suivie dans aucune contribution. Lorsque le second membre rejoint le foyer, la part personnalisée du premier est conservée et le complément est attribué au second ; si la règle était restée à 100 %, elle devient automatiquement 55/45.
 
 Les revenus peuvent être conservés comme informations de référence pour expliquer ou ajuster manuellement les pourcentages, mais ils ne sont pas utilisés pour calculer le disponible prévisionnel personnel.
 

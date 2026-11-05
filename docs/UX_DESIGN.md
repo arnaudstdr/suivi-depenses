@@ -58,7 +58,9 @@ Le solde saisi est un instantané daté. Les sorties postérieures à cet instan
 
 ## 3. Participation au foyer
 
-Le tableau de bord Personnel n'affiche qu'une seule ligne agrégée. Le détail est disponible dans l'écran Charges / Récurrences.
+Le tableau de bord Personnel n'affiche qu'une seule ligne agrégée. Le détail est disponible dans l'écran Charges / Récurrences et l'écran Répartition.
+
+L'écran Répartition permet au propriétaire de modifier les pourcentages par défaut. Avec deux membres, la somme doit faire 100 %. Avec un seul membre, une part inférieure à 100 % est possible : la part restante n'est pas attribuée et n'est pas suivie dans les contributions. Un raccourci permet d'appliquer 55 % immédiatement.
 
 La vue détaillée permet de voir chaque charge commune, le montant total, le pourcentage de chacun et la part individuelle. La contribution aux courses (269,50 € pour la part initiale de 55 %) est incluse dans le total de participation. La participation apparaît comme une échéance pointable, avec la même interaction que les autres charges récurrentes : bouton « Pointer », puis confirmation de la date réelle du virement et du montant réellement transféré. Après validation, le statut devient « Effectué » et le montant/date sont conservés. Une correction ultérieure est explicite et auditée. Le pointage change le statut, pas le montant du disponible. Répartition par défaut actuelle : 55 % / 45 %, modifiable globalement et par charge.
 

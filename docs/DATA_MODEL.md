@@ -282,11 +282,11 @@ Contrainte UNIQUE (budget_id, period_start). Aucun report du reliquat. Le consom
 
 ## 11. allocation_rules et allocation_rule_members
 
-Une règle peut être la répartition par défaut du foyer ou une règle spécifique à une charge. Chaque règle contient les pourcentages par membre, en `NUMERIC(6,3)`, totalisant exactement 100 %. La règle spécifique prévaut sur la règle par défaut.
+Une règle peut être la répartition par défaut du foyer ou une règle spécifique à une charge. Chaque règle contient les pourcentages par membre, en `NUMERIC(6,3)`. Avec deux membres, la somme doit être exactement 100 %. Avec un seul membre, une part inférieure à 100 % est autorisée ; la part non attribuée n'est suivie dans aucune contribution. La règle spécifique prévaut sur la règle par défaut.
 
-À la création du foyer, la règle par défaut contient le seul propriétaire à 100 %. Quand le second membre rejoint le foyer, elle passe automatiquement à 55 % pour le premier membre et 45 % pour le second, tant qu'elle n'a pas déjà été personnalisée. Les foyers existants sont backfillés par la migration `0005_allocations`. La colonne `recurring_expenses.allocation_rule_id` permet de lier une règle spécifique à une charge commune.
+À la création du foyer, la règle par défaut contient le seul propriétaire à 100 %. Ce pourcentage peut être modifié manuellement, par exemple à 55 %. Quand le second membre rejoint le foyer, la part personnalisée du premier est conservée et le complément est attribué au second ; si la règle était restée à 100 %, elle devient automatiquement 55/45. Les foyers existants sont backfillés par la migration `0005_allocations`. La colonne `recurring_expenses.allocation_rule_id` permet de lier une règle spécifique à une charge commune.
 
-Une charge commune est imputée à chaque membre selon son pourcentage. La répartition se fait au centime avec la méthode du plus fort reste, de façon déterministe, et la somme des parts est exactement égale au montant. Pour le tableau de bord personnel, seule la quote-part du membre connecté est agrégée dans Participation au foyer.
+Une charge commune est imputée à chaque membre selon son pourcentage. La répartition se fait au centime avec la méthode du plus fort reste, de façon déterministe. Avec deux membres, la somme des parts est exactement égale au montant. Avec un seul membre à 55 %, seule la part attribuée est allouée ; les 45 % restants ne sont pas suivis. Pour le tableau de bord personnel, seule la quote-part du membre connecté est agrégée dans Participation au foyer.
 
 La contribution mensuelle au budget courses (55 % de 490 €, soit 269,50 € pour l'utilisateur et 220,50 € pour l'autre membre) est intégrée à la ligne Participation au foyer. Les achats de courses ne sont ensuite imputés qu'au budget courses : ils ne diminuent jamais le disponible personnel une seconde fois.
 
