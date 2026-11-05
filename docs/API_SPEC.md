@@ -85,9 +85,9 @@ Les déductions couvrent les engagements non payés et les sorties payées aprè
 | Méthode | Route | Description |
 |---|---|---|
 | GET | `/households/{household_id}/contributions?period=YYYY-MM` | Lire la participation du membre pour la période |
-| POST | `/households/{household_id}/contributions/{contribution_id}/mark-transferred` | Confirmer que le virement a été effectué |
+| POST | `/households/{household_id}/contributions/{contribution_id}/mark-transferred` | Pointer le virement avec sa date et son montant réels |
 
-La contribution mensuelle agrège la part du membre dans les charges communes et sa contribution au budget courses. Le statut passe de `pending` à `transferred` avec `transferred_at`. Cette action ne modifie pas à elle seule le disponible : si le virement est postérieur au dernier instantané de solde, son montant reste déduit. Une nouvelle saisie du solde après le virement l'intègre et supprime alors la déduction, sans double comptage.
+La contribution mensuelle agrège la part du membre dans les charges communes et sa contribution au budget courses. Elle se pointe comme une échéance récurrente : le corps de la requête accepte `transferred_at`, `transferred_amount_cents` et une note facultative. Le serveur passe de `pending` à `transferred`, associe une transaction réelle unique et journalise l'opération. Le pointage est idempotent ; une correction ultérieure est explicite et auditée. Cette action ne modifie pas à elle seule le disponible : si le virement est postérieur au dernier instantané de solde, son montant reste déduit. Une nouvelle saisie du solde après le virement l'intègre et supprime alors la déduction, sans double comptage.
 
 ## 6. Transactions
 
