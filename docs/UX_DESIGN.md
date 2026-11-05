@@ -46,7 +46,7 @@ Le solde saisi est un instantané daté. Les sorties postérieures à cet instan
 │                                                                   │
 │ Charges personnelles restantes        - 250,00 €                 │
 │ Participation au foyer                - 300,00 €                 │
-│ Virement de participation : À effectuer                           │
+│ Participation au foyer : À pointer · bouton « Pointer »            │
 │ Dépenses ponctuelles prévues           - 107,50 €                 │
 │                                                                   │
 │ BUDGET COURSES DU FOYER                                            │
@@ -60,7 +60,7 @@ Le solde saisi est un instantané daté. Les sorties postérieures à cet instan
 
 Le tableau de bord Personnel n'affiche qu'une seule ligne agrégée. Le détail est disponible dans l'écran Charges / Récurrences.
 
-La vue détaillée permet de voir chaque charge commune, le montant total, le pourcentage de chacun et la part individuelle. La contribution aux courses (269,50 € pour la part initiale de 55 %) est incluse dans le total de participation. L'utilisateur marque explicitement son virement comme effectué après l'avoir réalisé ; cette action change le statut, pas le montant du disponible. Répartition par défaut actuelle : 55 % / 45 %, modifiable globalement et par charge.
+La vue détaillée permet de voir chaque charge commune, le montant total, le pourcentage de chacun et la part individuelle. La contribution aux courses (269,50 € pour la part initiale de 55 %) est incluse dans le total de participation. La participation apparaît comme une échéance pointable, avec la même interaction que les autres charges récurrentes : bouton « Pointer », puis confirmation de la date réelle du virement et du montant réellement transféré. Après validation, le statut devient « Effectué » et le montant/date sont conservés. Une correction ultérieure est explicite et auditée. Le pointage change le statut, pas le montant du disponible. Répartition par défaut actuelle : 55 % / 45 %, modifiable globalement et par charge.
 
 ## 4. Budget courses
 
@@ -101,7 +101,7 @@ Création/modification :
 - répartition (uniquement si commune) ;
 - montant variable ou fixe.
 
-Pointage d'une échéance : ouvrir une confirmation légère avec date réelle du paiement et montant réellement débité (montant attendu prérempli pour une charge fixe ; saisie obligatoire pour une charge variable). Après validation, afficher le statut « Payée » et le montant réel. Le pointage ne change pas le disponible si le paiement est postérieur au dernier instantané de solde ; la sortie reste provisionnée jusqu'à une nouvelle saisie du solde.
+Pointage d'une échéance récurrente ou de la participation au foyer : ouvrir une confirmation légère avec date réelle du paiement/virement et montant réellement débité/transféré (montant attendu prérempli pour une charge fixe ; saisie obligatoire pour une charge variable). Après validation, afficher le statut « Payée » et le montant réel. Le pointage ne change pas le disponible si le paiement est postérieur au dernier instantané de solde ; la sortie reste provisionnée jusqu'à une nouvelle saisie du solde.
 
 ## 7. Vue Foyer
 
