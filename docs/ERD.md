@@ -1,7 +1,7 @@
 # Diagramme entité-association — Suivi des dépenses
 
-**Version :** 0.4  
-**Référence :** DATA_MODEL.md v0.3  
+**Version :** 0.5  
+**Référence :** DATA_MODEL.md v0.4  
 **Statut :** Diagramme conceptuel aligné sur le périmètre fonctionnel
 
 ## Diagramme
@@ -11,6 +11,8 @@ erDiagram
     USERS ||--o{ HOUSEHOLD_MEMBERS : belongs
     HOUSEHOLDS ||--o{ HOUSEHOLD_MEMBERS : contains
     USERS ||--o{ PERSONAL_BALANCE_ENTRIES : records
+    USERS ||--o{ HOUSEHOLD_CONTRIBUTIONS : pays
+    HOUSEHOLDS ||--o{ HOUSEHOLD_CONTRIBUTIONS : receives
     USERS ||--o{ TRANSACTIONS : creates
     HOUSEHOLDS ||--o{ TRANSACTIONS : owns_shared
     CATEGORIES ||--o{ TRANSACTIONS : classifies
@@ -43,6 +45,16 @@ erDiagram
       uuid household_id FK
       uuid user_id FK
       varchar role
+    }
+    HOUSEHOLD_CONTRIBUTIONS {
+      uuid id PK
+      uuid household_id FK
+      uuid user_id FK
+      date period_start
+      bigint amount_cents
+      numeric allocation_percentage
+      varchar status
+      timestamptz transferred_at
     }
     PERSONAL_BALANCE_ENTRIES {
       uuid id PK
@@ -126,8 +138,9 @@ erDiagram
 2. Le solde suivi est personnel, manuel et historisé ; aucun compte joint n'est modélisé.
 3. Une charge récurrente est personnelle ou commune.
 4. Une charge commune est répartie par règle par défaut 55/45, ou par règle spécifique totalisant 100 %.
-5. Les parts communes restant à payer sont agrégées dans le disponible personnel sous une ligne « Participation au foyer ».
-6. Les courses communes sont imputées au budget courses du foyer (490 € par défaut), jamais au disponible personnel.
-7. Une occurrence récurrente payée référence une transaction ; une échéance ne peut être générée deux fois.
-8. Le disponible prévisionnel ne prend aucun revenu futur en compte.
-9. Les sommes sont en centimes entiers et les périodes budgétaires sont mensuelles sans report.
+5. La participation au foyer inclut les charges communes et la contribution au budget courses ; son virement est suivi par mois et par membre.
+6. Le solde manuel est un instantané daté : toute sortie postérieure reste déduite, même si elle est marquée payée, jusqu'à une nouvelle saisie du solde.
+7. Les achats de courses communes sont imputés au budget courses du foyer (490 € par défaut), jamais au disponible personnel.
+8. Une occurrence récurrente payée référence une transaction ; une échéance ne peut être générée deux fois.
+9. Le disponible prévisionnel ne prend aucun revenu futur en compte.
+10. Les sommes sont en centimes entiers et les périodes budgétaires sont mensuelles sans report.
