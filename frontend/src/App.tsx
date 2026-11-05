@@ -11,10 +11,10 @@ const nav = [
 ];
 const euro=(v:number)=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(v);
 const recurring=[
-  {name:"Participation au foyer",detail:"Quote-part cumulée des charges communes",amount:300,due:"À venir",shared:true},
-  {name:"Téléphone",detail:"Abonnement mobile",amount:19.99,due:"08 nov.",shared:false},
-  {name:"Assurance auto",detail:"Prélèvement mensuel",amount:54.2,due:"12 nov.",shared:false},
-  {name:"Streaming",detail:"Abonnement",amount:13.99,due:"18 nov.",shared:false}
+  {name:"Participation au foyer",detail:"Quote-part cumulée des charges communes",amount:300,due:"À venir",shared:true,trackable:false},
+  {name:"Téléphone",detail:"Abonnement mobile",amount:19.99,due:"08 nov.",shared:false,trackable:true},
+  {name:"Assurance auto",detail:"Prélèvement mensuel",amount:54.2,due:"12 nov.",shared:false,trackable:true},
+  {name:"Streaming",detail:"Abonnement",amount:13.99,due:"18 nov.",shared:false,trackable:true}
 ];
 const initial=[
   {title:"Pharmacie",category:"Santé",date:"Aujourd'hui",amount:16.8,scope:"personal" as Scope,icon:HeartPulse,tone:"rose"},
@@ -26,7 +26,7 @@ function App(){
  const [context,setContext]=useState<Context>("Personnel"),[section,setSection]=useState<Section>("Vue d'ensemble");
  const [mobileMenu,setMobileMenu]=useState(false),[showAdd,setShowAdd]=useState(false),[showBalance,setShowBalance]=useState(false);
  const [balance,setBalance]=useState(1500),[balanceInput,setBalanceInput]=useState("1500"),[grocerySpent,setGrocerySpent]=useState(205.8),[contributionTransferred,setContributionTransferred]=useState(false);
- const [transactions,setTransactions]=useState(initial);
+ const [transactions,setTransactions]=useState(initial),[paidRecurring,setPaidRecurring]=useState<string[]>([]);
  const [form,setForm]=useState({label:"",amount:"",category:"Autre",scope:"personal" as Scope});
  const personal=true, householdShare=300, personalRecurring=88.18, planned=107.5;
  const available=balance-householdShare-personalRecurring-planned, groceryLeft=490-grocerySpent;
@@ -66,7 +66,7 @@ function App(){
       <article className="panel grocery-panel"><div className="panel-heading"><div><h2>Budget courses du foyer</h2><p>Enveloppe commune · Novembre</p></div><span className="soft-icon violet"><ShoppingBasket size={18}/></span></div><div className="grocery-total"><strong>{euro(groceryLeft)}</strong><span>restants sur {euro(490)}</span></div><div className="progress-track"><span className="progress-fill violet-fill" style={{width:`${grocerySpent/490*100}%`}}/></div><div className="card-foot"><span>{euro(grocerySpent)} dépensés</span><strong>{Math.round(grocerySpent/490*100)} % utilisé</strong></div><p className="grocery-note"><CircleHelp size={14}/> Les courses communes ne sont pas déduites de ton disponible personnel.</p></article>
      </section>
      <section className="content-grid lower-grid">
-      <article className="panel"><div className="panel-heading"><div><h2>Charges récurrentes</h2><p>Prochaines échéances</p></div><button className="text-link" onClick={()=>setSection("Charges récurrentes")}>Tout voir <ArrowUpRight size={15}/></button></div><div className="transaction-list">{recurring.map(x=><div className="transaction-row" key={x.name}><div className={`transaction-symbol ${x.shared?"purple":"blue"}`}>{x.shared?<House size={17}/>:<Repeat2 size={17}/>}</div><div className="transaction-main"><strong>{x.name}</strong><span>{x.detail} · {x.due}</span></div><strong className="transaction-amount">{euro(x.amount)}</strong></div>)}</div></article>
+      <article className="panel"><div className="panel-heading"><div><h2>Charges récurrentes</h2><p>Prochaines échéances</p></div><button className="text-link" onClick={()=>setSection("Charges récurrentes")}>Tout voir <ArrowUpRight size={15}/></button></div><div className="transaction-list">{recurring.map(x=><div className="transaction-row" key={x.name}><div className={`transaction-symbol ${x.shared?"purple":"blue"}`}>{x.shared?<House size={17}/>:<Repeat2 size={17}/>}</div><div className="transaction-main"><strong>{x.name}</strong><span>{x.detail} · {x.due}{paidRecurring.includes(x.name)?" · Payée":""}</span></div><strong className="transaction-amount">{euro(x.amount)}</strong>{x.trackable&&<button className={`recurring-check ${paidRecurring.includes(x.name)?"is-paid":""}`} onClick={()=>setPaidRecurring(v=>v.includes(x.name)?v.filter(n=>n!==x.name):[...v,x.name])}>{paidRecurring.includes(x.name)?"Payée":"Pointer"}</button>}</div>)}</div></article>
       <article className="panel"><div className="panel-heading"><div><h2>Dernières dépenses personnelles</h2><p>Les dépenses communes sont exclues</p></div><button className="text-link" onClick={()=>setSection("Dépenses")}>Tout voir <ArrowUpRight size={15}/></button></div><div className="transaction-list">{displayed.slice(0,4).map((t,i)=>{const Icon=t.icon;return <div className="transaction-row" key={t.title+i}><div className={`transaction-symbol ${t.tone}`}><Icon size={17}/></div><div className="transaction-main"><strong>{t.title}</strong><span>{t.category} · {t.date}</span></div><strong className="transaction-amount">− {euro(t.amount)}</strong></div>})}</div></article>
      </section>
     </>:<>
