@@ -77,7 +77,7 @@ function App() {
 
         {section === "Vue d'ensemble" ? (
           <div className="page-content">
-            <div className="page-heading"><div><div className="eyebrow">DIMANCHE 5 NOVEMBRE 2026</div><h1>Bonjour Arnaud</h1><p>Voici le résumé de tes finances personnelles.</p></div><button className="outline-button"><CalendarDays size={16}/> Ce mois-ci <ChevronDown size={14}/></button></div>
+            <div className="page-heading"><div><div className="eyebrow">JEUDI 5 NOVEMBRE 2026</div><h1>Bonjour Arnaud</h1><p>Voici le résumé de tes finances personnelles.</p></div><button className="outline-button"><CalendarDays size={16}/> Ce mois-ci <ChevronDown size={14}/></button></div>
             <section className="summary-grid">
               <article className="summary-card primary-card"><div className="card-top"><span>Dépenses du mois</span><span className="card-icon"><ArrowDownRight size={18}/></span></div><div className="big-number">684,70 €</div><div className="card-foot"><span className="trend negative"><ArrowUpRight size={14}/> 8,2 %</span><span>vs mois dernier</span></div><div className="primary-decoration"/></article>
               <article className="summary-card"><div className="card-top"><span>Budgets consommés</span><span className="soft-icon violet"><PiggyBank size={18}/></span></div><div className="big-number dark-number">319,70 € <small>/ 510 €</small></div><div className="progress-track"><span className="progress-fill violet-fill" style={{width:"62.7%"}}/></div><div className="card-foot"><span>62,7 % utilisé</span><strong>190,30 € restants</strong></div></article>
