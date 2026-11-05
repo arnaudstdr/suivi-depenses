@@ -306,7 +306,7 @@ Environnement Docker Compose cible :
 
 | Service | Rôle | Exposition |
 |---|---|---|
-| `frontend` | Build React servi par Nginx, proxy `/api` et `/health` | `127.0.0.1:8080` sur l'hôte |
+| `frontend` | Build React servi par Nginx, proxy `/api` et `/health` | `127.0.0.1:4000` sur l'hôte |
 | `api` | FastAPI | Réseau Docker interne et `127.0.0.1:8000` local |
 | `postgres` | Base de données | Réseau Docker interne uniquement |
 | Tailscale Serve | HTTPS et accès au tailnet | Tailnet, sans exposition publique par défaut |

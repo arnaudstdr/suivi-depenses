@@ -49,11 +49,11 @@ make down
 Nginx sert les fichiers statiques, applique le fallback SPA, ajoute les en-têtes
 de sécurité et proxifie `/api/` et `/health/` vers le service `api`.
 
-Le conteneur écoute sur `127.0.0.1:${FRONTEND_PORT:-8080}:80`. Sur le Raspberry
+Le conteneur écoute sur `127.0.0.1:${FRONTEND_PORT:-4000}:80`. Sur le Raspberry
 Pi, Tailscale Serve expose ce port sur le tailnet en HTTPS :
 
 ```bash
-sudo tailscale serve --bg 8080
+sudo tailscale serve --bg 4000
 sudo tailscale serve status
 ```
 

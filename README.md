@@ -68,11 +68,11 @@ par `make down` ; les données ne sont pas supprimées.
 ### Accès via Tailscale
 
 Caddy n'est pas utilisé dans ce premier déploiement. Le frontend écoute
-uniquement sur `127.0.0.1:8080` et Tailscale Serve fournit le HTTPS et l'accès
+uniquement sur `127.0.0.1:4000` et Tailscale Serve fournit le HTTPS et l'accès
 au tailnet :
 
 ```bash
-sudo tailscale serve --bg 8080
+sudo tailscale serve --bg 4000
 sudo tailscale serve status
 ```
 
