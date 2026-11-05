@@ -1,8 +1,8 @@
 # Architecture technique — Suivi des dépenses
 
-**Version :** 0.1  
+**Version :** 0.2  
 **Statut :** Proposition technique avec décisions d'hébergement et de monitoring validées  
-**Références :** `SPECIFICATIONS.md`, `DATA_MODEL.md`, `ERD.md` v0.3, `API_SPEC.md` v0.2
+**Références :** `SPECIFICATIONS.md`, `DATA_MODEL.md`, `ERD.md` v0.4, `API_SPEC.md` v0.3
 
 ## 1. Objectifs d'architecture
 
@@ -129,8 +129,8 @@ Cette structure est une cible. Les fichiers de configuration et les dossiers ne 
 - `categories` : catégories système et personnalisées ;
 - `budgets` : enveloppes et périodes ;
 - `recurring` : définitions et occurrences ;
-- `incomes` : revenus déclarés servant à la répartition ;
-- `allocations` : règles, prévisions et calculs définitifs ;
+- `balances` : historique des saisies manuelles du solde personnel ;
+- `allocations` : règles de répartition des charges communes ;
 - `notifications` : notifications et préférences ;
 - `imports_exports` : traitement des fichiers ;
 - `audit` : journal des actions sensibles.
@@ -193,14 +193,11 @@ Les composants génériques (boutons, champs, modales, tableaux, graphiques) ré
 
 ### 6.2 Navigation proposée
 
-- Tableau de bord foyer
-- Tableau de bord personnel
-- Transactions
-- Budget alimentaire
-- Budgets personnels
-- Dépenses récurrentes
-- Répartition des charges
-- Revenus de référence
+- Tableau de bord personnel (disponible prévisionnel en premier)
+- Dépenses personnelles et communes
+- Charges récurrentes
+- Budget courses commun
+- Répartition des charges du foyer
 - Historique
 - Paramètres
 
@@ -214,7 +211,7 @@ La navigation exacte et les vues seront définies dans `UX_DESIGN.md` et la maqu
 - Les montants sont manipulés comme entiers en centimes ; le formatage en devise se fait à l'affichage.
 - Les erreurs métier de l'API sont présentées avec un message compréhensible et une action possible.
 
-Aucun calcul financier faisant autorité n'est réalisé uniquement dans le frontend. Les prévisualisations locales restent indicatives ; le backend produit les résultats définitifs.
+Aucun calcul financier faisant autorité n'est réalisé uniquement dans le frontend. Le backend calcule le disponible prévisionnel à partir du dernier solde personnel saisi, des charges personnelles restant à payer, de la participation au foyer restante et des dépenses ponctuelles personnelles prévues. Les revenus futurs et les achats de courses communes sont exclus de ce calcul.
 
 ## 7. PWA et cache hors ligne
 
