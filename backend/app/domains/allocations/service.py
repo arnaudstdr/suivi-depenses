@@ -89,8 +89,21 @@ def ensure_default_allocation_rule(
         _replace_members(rule, target)
         db.flush()
     elif len(rule.members) == 1 and len(members) == 2:
-        # Passage du foyer à un membre à deux membres : 100 % devient 55/45.
-        _replace_members(rule, target)
+        # Passage d'un foyer à un membre vers deux membres : la part
+        # personnalisée du membre existant est conservée, et le reste est
+        # attribué au nouveau membre. Une règle restée à 100 % devient 55/45.
+        existing = rule.members[0]
+        if existing.user_id in target and existing.percentage < HUNDRED:
+            new_user_id = next(user_id for user_id in target if user_id != existing.user_id)
+            _replace_members(
+                rule,
+                {
+                    existing.user_id: existing.percentage,
+                    new_user_id: HUNDRED - existing.percentage,
+                },
+            )
+        else:
+            _replace_members(rule, target)
         db.flush()
     return rule
 
@@ -266,7 +279,13 @@ class AllocationService:
 
         percentages = {member.user_id: member.percentage for member in members}
         total = sum(percentages.values(), Decimal("0")).quantize(Decimal("0.001"))
-        if total != HUNDRED:
+        if total > HUNDRED:
+            raise AppError(
+                code="invalid_allocation",
+                message="La somme des pourcentages ne peut pas dépasser 100 %.",
+                status_code=422,
+            )
+        if len(active_members) > 1 and total != HUNDRED:
             raise AppError(
                 code="invalid_allocation",
                 message="La somme des pourcentages doit être égale à 100 %.",

@@ -86,6 +86,52 @@ def test_default_rule_is_100_then_55_45(
     assert percentages == [Decimal("45.000"), Decimal("55.000")]
 
 
+def test_single_member_can_set_partial_share_and_keep_it_after_invitation(
+    client: TestClient,
+    db_session: Session,
+    test_settings: Settings,
+) -> None:
+    bootstrap_owner(db_session, test_settings)
+    assert login(client).status_code == 200
+    owner_id = client.get("/api/v1/auth/me").json()["user"]["id"]
+
+    response = client.put(
+        "/api/v1/households/me/allocation-rules/default",
+        json={"members": [{"user_id": owner_id, "percentage": "55.000"}]},
+        headers={"X-CSRF-Token": get_csrf(client)},
+    )
+
+    assert response.status_code == 200, response.text
+    assert Decimal(str(response.json()["members"][0]["percentage"])) == Decimal("55.000")
+
+    contributions = client.get("/api/v1/households/me/contributions")
+    assert contributions.status_code == 200
+    owner_contribution = contributions.json()[0]
+    assert owner_contribution["amount_cents"] == 26950
+    assert Decimal(str(owner_contribution["allocation_percentage"])) == Decimal("55.000")
+
+    invitation = create_invitation(client, email=INVITEE_EMAIL)
+    client.cookies.clear()
+    accepted = accept_invitation(
+        client,
+        token=invitation.json()["token"],
+        email=INVITEE_EMAIL,
+        first_name=INVITEE_FIRST_NAME,
+        password=INVITEE_PASSWORD,
+    )
+    assert accepted.status_code == 201
+    member_id = accepted.json()["user"]["id"]
+
+    rules = _rules(client)
+    percentages = {
+        member["user_id"]: Decimal(str(member["percentage"])) for member in rules[0]["members"]
+    }
+    assert percentages == {
+        owner_id: Decimal("55.000"),
+        member_id: Decimal("45.000"),
+    }
+
+
 def test_default_rule_can_be_customized(
     client: TestClient,
     db_session: Session,

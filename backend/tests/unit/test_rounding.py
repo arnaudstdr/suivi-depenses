@@ -54,6 +54,23 @@ def test_split_with_three_members() -> None:
     assert sum(shares.values()) == 100
 
 
-def test_split_rejects_invalid_total() -> None:
+def test_split_rejects_total_above_hundred() -> None:
     with pytest.raises(ValueError):
-        split_amount(1000, {ALICE: Decimal("50"), BOB: Decimal("40")})
+        split_amount(1000, {ALICE: Decimal("80"), BOB: Decimal("40")})
+
+
+def test_split_partial_single_member_leaves_remainder_unassigned() -> None:
+    shares = split_amount(10000, {ALICE: Decimal("55")})
+
+    assert shares == {ALICE: 5500}
+    assert sum(shares.values()) == 5500
+
+
+def test_split_partial_rounds_assigned_total_down() -> None:
+    shares = split_amount(101, {ALICE: Decimal("55")})
+
+    assert shares == {ALICE: 55}
+
+
+def test_split_zero_percentage_assigns_nothing() -> None:
+    assert split_amount(1000, {ALICE: Decimal("0")}) == {ALICE: 0}
