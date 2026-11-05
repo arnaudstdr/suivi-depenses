@@ -319,6 +319,16 @@ Le calcul utilise `recorded_at` comme date de coupure. Pour les transactions, co
 
 Le statut de paiement et l'inclusion dans l'instantané bancaire sont deux notions distinctes. Marquer un virement comme effectué ne modifie donc pas le disponible à lui seul ; une nouvelle saisie du solde après le virement actualise la base et fait disparaître la déduction correspondante sans double comptage.
 
+Règles d'implémentation de la tranche 4.4 :
+
+- Le calcul porte sur le mois courant.
+- Pour les éléments payés, le mois retenu est celui du paiement réel (`paid_at` ou `transaction_date` de la transaction liée) ; pour les éléments non payés, celui de l'échéance ou de la date prévue.
+- Les transactions liées à une occurrence récurrente, à une dépense prévue ou à un virement de participation sont exclues des déductions de transactions personnelles : leur montant est déjà porté par la ligne source.
+- Une occurrence `skipped` et une dépense annulée sont exclues.
+- Une contribution `pending` est déduite de son montant calculé. Une contribution `transferred` est déduite de son montant réel si le virement est postérieur à l'instantané, et exclue sinon.
+- Les achats de courses communes ne sont jamais déduits du disponible personnel.
+- Les déductions peuvent être négatives lorsqu'un remboursement personnel postérieur à l'instantané compense une dépense déjà reflétée.
+
 Le calcul ne comprend aucun revenu attendu. Le solde négatif est autorisé et affiché explicitement.
 
 ## 14. Audit et fonctions annexes

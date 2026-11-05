@@ -206,6 +206,34 @@ Règles principales :
 - Une contribution transférée est figée ; les nouvelles charges ne la modifient
   plus.
 
+## Suivi financier — tranche 4.4
+
+Le moteur de disponible prévisionnel est exposé par :
+
+- `GET /api/v1/users/me/dashboard?period=YYYY-MM`
+
+La Phase 4 ne calcule que le mois courant. L'endpoint renvoie :
+
+- le dernier solde personnel et son instantané ;
+- le détail des déductions (récurrent, prévu, transactions, participation) ;
+- le disponible prévisionnel ;
+- le budget courses alloué/consommé/restant ;
+- les charges récurrentes à venir ;
+- les dernières transactions personnelles.
+
+Règles de calcul :
+
+- Les éléments payés sont rattachés au mois du paiement réel, les éléments non
+  payés au mois de leur échéance ou date prévue.
+- Les transactions liées à une occurrence, une dépense prévue ou un virement de
+  participation sont exclues des déductions de transactions personnelles.
+- Une occurrence `skipped` et une dépense annulée sont exclues.
+- Une contribution `pending` est déduite de son montant ; une contribution
+  `transferred` est déduite si le virement est postérieur au dernier instantané
+  de solde, et exclue sinon.
+- Les achats de courses communes ne sont jamais déduits du disponible personnel.
+- Une nouvelle saisie de solde réinitialise les déductions déjà reflétées.
+
 ## Contrôles
 
 ```bash

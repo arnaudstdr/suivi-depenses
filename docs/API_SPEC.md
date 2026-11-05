@@ -84,6 +84,8 @@ Les catégories globales sont en lecture seule. Les catégories du foyer ne peuv
 |---|---|---|
 | GET | `/users/me/dashboard?period=2026-11` | Synthèse personnelle |
 
+La Phase 4 ne calcule que le mois courant. Un autre `period` renvoie `422 unsupported_period`.
+
 Exemple de réponse :
 
 ```json
@@ -110,6 +112,8 @@ Exemple de réponse :
 ```
 
 Les déductions couvrent les engagements non payés et les sorties payées après le dernier instantané de solde. Les revenus futurs et les achats de courses communes sont exclus du disponible personnel. La ligne household_contribution est agrégée ; elle inclut la contribution au budget courses et le détail est disponible dans les vues charges.
+
+La réponse complète contient aussi `deductions.total_cents`, `grocery_budget` et les listes `upcoming_recurring` et `recent_personal_transactions`. Les transactions liées à une occurrence récurrente, à une dépense prévue ou à un virement de participation sont exclues des déductions de transactions personnelles afin d'éviter un double comptage. Pour les éléments payés, le mois retenu est celui du paiement réel ; pour les éléments non payés, celui de l'échéance ou de la date prévue.
 
 ## 5. Participation au foyer
 
