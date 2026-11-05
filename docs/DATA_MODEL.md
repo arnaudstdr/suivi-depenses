@@ -21,7 +21,7 @@
 
 | Domaine | Entités |
 |---|---|
-| Comptes | users, households, household_members |
+| Comptes | users, households, household_members, sessions, invitations |
 | Solde personnel | personal_balance_entries |
 | Contributions foyer | household_contributions |
 | Transactions | categories, transactions |
@@ -44,7 +44,7 @@ Ces tables constituent le socle d'identité implémenté par la migration `0001_
 |---|---|---|
 | id | UUID | PK |
 | email | VARCHAR(320) | NOT NULL, UNIQUE, stocké en minuscules (`CHECK email = lower(email)`) |
-| password_hash | VARCHAR(255) | NOT NULL, hachage Argon2id à venir |
+| password_hash | VARCHAR(255) | NOT NULL, hachage Argon2id |
 | first_name | VARCHAR(100) | NOT NULL, non vide |
 | is_active | BOOLEAN | NOT NULL, défaut `true` |
 | created_at | TIMESTAMPTZ | NOT NULL, défaut `now()` |
@@ -75,7 +75,52 @@ Ces tables constituent le socle d'identité implémenté par la migration `0001_
 
 Contraintes : `UNIQUE(household_id, user_id)` et `UNIQUE(user_id)`, car un compte appartient à un seul foyer en V1. `household_members` associe les deux comptes au foyer avec un rôle et un statut actif.
 
-Les tables `sessions`, `invitations` et `audit_logs` ne sont pas encore créées. Elles seront spécifiées et ajoutées avec la tranche « socle sécurisé ».
+### sessions
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| user_id | UUID | FK users, `ON DELETE CASCADE`, NOT NULL |
+| token_hash | VARCHAR(64) | NOT NULL, UNIQUE, SHA-256 du token opaque |
+| created_at | TIMESTAMPTZ | NOT NULL |
+| last_seen_at | TIMESTAMPTZ | NOT NULL |
+| expires_at | TIMESTAMPTZ | NOT NULL, `CHECK expires_at > created_at` |
+| revoked_at | TIMESTAMPTZ | nullable |
+
+Le token de session brut n'est jamais stocké : seul son hash SHA-256 est conservé. Le cookie de session est `HttpOnly`, `Secure` en production, `SameSite=Lax` par défaut et expire après 30 jours. Une session révoquée ou expirée est refusée.
+
+### invitations
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| household_id | UUID | FK households, `ON DELETE CASCADE`, NOT NULL |
+| email | VARCHAR(320) | NOT NULL, minuscules, non vide |
+| role | VARCHAR(20) | NOT NULL, `member` en V1 |
+| token_hash | VARCHAR(64) | NOT NULL, UNIQUE, SHA-256 du token |
+| created_by_user_id | UUID | FK users, `ON DELETE CASCADE`, NOT NULL |
+| accepted_by_user_id | UUID | FK users, `ON DELETE SET NULL`, nullable |
+| expires_at | TIMESTAMPTZ | NOT NULL, `CHECK expires_at > created_at` |
+| used_at | TIMESTAMPTZ | nullable |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+Une invitation est à usage unique, expire après 7 jours par défaut et doit être acceptée avec l'email invité. Le token brut n'est affiché qu'une fois au propriétaire ; seul son hash est stocké. L'acceptation crée l'utilisateur, l'appartenance au foyer et une session, dans une seule transaction.
+
+### audit_logs
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| occurred_at | TIMESTAMPTZ | NOT NULL |
+| actor_user_id | UUID | FK users, `ON DELETE SET NULL`, nullable |
+| household_id | UUID | FK households, `ON DELETE SET NULL`, nullable |
+| action | VARCHAR(100) | NOT NULL, non vide |
+| entity_type | VARCHAR(50) | NOT NULL |
+| entity_id | UUID | nullable |
+| details | JSONB | nullable, sans secret ni donnée financière détaillée |
+| request_id | VARCHAR(64) | nullable |
+
+Actions enregistrées par le socle : `auth.login_succeeded`, `auth.login_failed`, `auth.logout`, `household.bootstrapped`, `invitation.created`, `invitation.accepted` et `user.profile_updated`.
 
 ## 4. personal_balance_entries
 

@@ -12,6 +12,11 @@
 erDiagram
     USERS ||--o| HOUSEHOLD_MEMBERS : belongs
     HOUSEHOLDS ||--o{ HOUSEHOLD_MEMBERS : contains
+    USERS ||--o{ SESSIONS : opens
+    HOUSEHOLDS ||--o{ INVITATIONS : receives
+    USERS ||--o{ INVITATIONS : creates
+    USERS ||--o{ AUDIT_LOGS : acts
+    HOUSEHOLDS ||--o{ AUDIT_LOGS : concerns
     USERS ||--o{ PERSONAL_BALANCE_ENTRIES : records
     USERS ||--o{ HOUSEHOLD_CONTRIBUTIONS : pays
     HOUSEHOLDS ||--o{ HOUSEHOLD_CONTRIBUTIONS : receives
@@ -57,6 +62,38 @@ erDiagram
       boolean is_active
       timestamptz created_at
       timestamptz updated_at
+    }
+    SESSIONS {
+      uuid id PK
+      uuid user_id FK
+      varchar token_hash UK
+      timestamptz created_at
+      timestamptz last_seen_at
+      timestamptz expires_at
+      timestamptz revoked_at
+    }
+    INVITATIONS {
+      uuid id PK
+      uuid household_id FK
+      uuid created_by_user_id FK
+      uuid accepted_by_user_id FK
+      varchar email
+      varchar role
+      varchar token_hash UK
+      timestamptz expires_at
+      timestamptz used_at
+      timestamptz created_at
+    }
+    AUDIT_LOGS {
+      uuid id PK
+      uuid actor_user_id FK
+      uuid household_id FK
+      varchar action
+      varchar entity_type
+      uuid entity_id
+      jsonb details
+      varchar request_id
+      timestamptz occurred_at
     }
     HOUSEHOLD_CONTRIBUTIONS {
       uuid id PK

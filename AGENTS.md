@@ -205,10 +205,11 @@ Créer des tests unitaires dédiés à ces cas, y compris les paiements juste av
 
 - Les documents de conception sont présents dans `docs/`.
 - Le frontend contient une maquette React/Vite avec données fictives.
-- Le backend FastAPI/SQLAlchemy/Alembic est présent dans `backend/`, avec les tables d'identité `users`, `households` et `household_members`.
+- Le backend FastAPI/SQLAlchemy/Alembic est présent dans `backend/`, avec les tables `users`, `households`, `household_members`, `sessions`, `invitations` et `audit_logs`.
 - Les migrations Alembic, les tests backend, Docker Compose pour PostgreSQL, le Dockerfile API et la CI GitHub Actions sont présents.
-- L'authentification, les sessions, les invitations, le CSRF et l'audit ne sont pas encore implémentés.
+- Le socle sécurisé est implémenté : bootstrap CLI, sessions opaques, cookies sécurisés, CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et audit.
 - Le frontend possède les scripts npm `dev`, `build` et `preview`; il n'existe pas encore de script `lint` ou `test` déclaré dans son `package.json`.
 - Les commandes backend réellement disponibles sont documentées dans `backend/README.md` et dans le `Makefile`.
+- La prochaine tranche est le suivi financier (Phase 4).
 
 Cette section doit être mise à jour lorsque l'architecture réelle du dépôt évolue. Ne pas créer des fichiers ou commandes manquants en supposant qu'ils existent.

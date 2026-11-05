@@ -19,12 +19,30 @@
 
 | Méthode | Route | Description |
 |---|---|---|
+| GET | `/auth/csrf` | Obtenir le jeton CSRF et son cookie |
 | POST | `/auth/login` | Connexion |
 | POST | `/auth/logout` | Déconnexion |
-| GET | `/auth/me` | Utilisateur courant |
+| GET | `/auth/me` | Utilisateur courant, foyer et membres |
 | PATCH | `/users/me` | Modifier son profil |
+| GET | `/households/me` | Foyer courant et membres |
+| POST | `/households/me/invitations` | Créer une invitation (propriétaire uniquement) |
+| GET | `/households/me/invitations` | Lister les invitations (propriétaire uniquement) |
+| POST | `/invitations/{token}/accept` | Accepter une invitation |
 
-Sessions par cookie HttpOnly, Secure, SameSite adapté et protection CSRF. La création de compte est sur invitation en V1.
+### Sessions et CSRF
+
+- Session opaque stockée côté serveur : seul le hash SHA-256 du token est conservé. Cookie `suivi_session`, `HttpOnly`, `Secure` en production, `SameSite=Lax`, durée de 30 jours par défaut.
+- Protection CSRF par double-submit : cookie `suivi_csrf` lisible par le frontend et en-tête `X-CSRF-Token` identique, obligatoire sur `login`, `logout`, `PATCH /users/me`, création d'invitation et acceptation d'invitation.
+- Le frontend appelle `GET /auth/csrf` avant la première mutation. Le jeton est stable tant que le cookie existe.
+- Toutes les réponses `/api/v1` sont renvoyées avec `Cache-Control: no-store`.
+
+### Création de compte et invitations
+
+La création du premier foyer et du compte propriétaire se fait hors HTTP, par la commande CLI documentée dans `backend/README.md`. Aucune route publique d'inscription n'existe.
+
+Le propriétaire crée ensuite une invitation pour le second membre. Le token brut est renvoyé **une seule fois** dans la réponse de création ; seul son hash est stocké. L'invitation expire après 7 jours, est à usage unique et doit être acceptée avec l'email invité. L'acceptation crée l'utilisateur, l'appartenance au foyer et une session dans une transaction unique.
+
+Codes d'erreur spécifiques : `invalid_credentials`, `invalid_invitation`, `invitation_pending`, `household_full`, `email_already_registered`, `csrf_failed`, `unauthorized`, `forbidden`, `no_household`.
 
 ## 3. Solde personnel
 

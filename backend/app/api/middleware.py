@@ -12,12 +12,18 @@ from app.core.request_context import request_id_var
 logger = logging.getLogger(__name__)
 
 _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+_INVITATION_PATH_RE = re.compile(r"(/invitations/)[^/]+(/accept)")
 
 
 def _request_id_from_header(value: str | None) -> str:
     if value is not None and _REQUEST_ID_RE.fullmatch(value):
         return value
     return str(uuid.uuid4())
+
+
+def _safe_log_path(path: str) -> str:
+    """Ne jamais journaliser le token d'invitation présent dans l'URL."""
+    return _INVITATION_PATH_RE.sub(r"\1{token}\2", path)
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -40,7 +46,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 extra={
                     "extra_fields": {
                         "method": request.method,
-                        "path": request.url.path,
+                        "path": _safe_log_path(request.url.path),
                         "status": status_code,
                         "duration_ms": duration_ms,
                     }
@@ -49,4 +55,6 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             request_id_var.reset(token)
 
         response.headers["X-Request-ID"] = request_id
+        if request.url.path.startswith("/api/v1"):
+            response.headers.setdefault("Cache-Control", "no-store")
         return response

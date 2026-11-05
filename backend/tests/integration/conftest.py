@@ -15,19 +15,29 @@ def clean_database(migrated_database_url: str) -> Iterator[None]:
     engine = create_engine(migrated_database_url)
     yield
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE household_members, households, users CASCADE"))
+        connection.execute(
+            text(
+                "TRUNCATE TABLE audit_logs, invitations, sessions, "
+                "household_members, households, users CASCADE"
+            )
+        )
     engine.dispose()
 
 
 @pytest.fixture()
-def app(migrated_database_url: str, clean_database: None) -> FastAPI:
-    settings = Settings(
+def test_settings(migrated_database_url: str) -> Settings:
+    return Settings(
         _env_file=None,
         app_env="test",
         database_url=migrated_database_url,
         log_level="WARNING",
+        cookie_secure=False,
     )
-    return create_app(settings)
+
+
+@pytest.fixture()
+def app(test_settings: Settings, clean_database: None) -> FastAPI:
+    return create_app(test_settings)
 
 
 @pytest.fixture()

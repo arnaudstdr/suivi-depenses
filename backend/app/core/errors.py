@@ -128,6 +128,9 @@ def register_exception_handlers(app: FastAPI) -> None:
             },
             exc_info=(type(exc), exc, exc.__traceback__),
         )
+        headers = _response_headers(request_id)
+        if request.url.path.startswith("/api/v1"):
+            headers["Cache-Control"] = "no-store"
         return JSONResponse(
             status_code=500,
             content=_payload(
@@ -135,5 +138,5 @@ def register_exception_handlers(app: FastAPI) -> None:
                 message="Une erreur interne est survenue.",
                 request_id=request_id,
             ),
-            headers=_response_headers(request_id),
+            headers=headers,
         )

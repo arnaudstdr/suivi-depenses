@@ -36,7 +36,7 @@ Les achats enregistrés comme courses communes diminuent uniquement l'enveloppe 
 
 La conception fonctionnelle et la maquette UX sont validées. Le socle backend est en place : FastAPI, SQLAlchemy 2, Alembic, PostgreSQL, endpoints de santé, tests et CI. Le frontend actuel reste une maquette avec données fictives et ne consomme pas encore l'API.
 
-Les tables d'identité `users`, `households` et `household_members` sont créées. L'authentification, les sessions, les invitations et le contrôle d'accès constituent la prochaine tranche.
+Le socle sécurisé est également en place : bootstrap du foyer par CLI, sessions opaques, cookies sécurisés, protection CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et journal d'audit. Les tables `users`, `households`, `household_members`, `sessions`, `invitations` et `audit_logs` sont créées.
 
 ## Documentation
 
@@ -50,4 +50,4 @@ Les tables d'identité `users`, `households` et `household_members` sont créée
 
 ## Prochaine étape
 
-Implémenter le socle sécurisé : sessions opaques, invitations, authentification par cookie, protection CSRF, contrôle d'accès personnel/foyer et audit, en suivant `AGENTS.md` et `docs/ROADMAP.md`. Les commandes backend sont documentées dans [`backend/README.md`](backend/README.md).
+Démarrer la Phase 4 — suivi financier : solde personnel manuel et historisé, transactions, catégories, charges récurrentes, dépenses prévues, budget courses et calcul du disponible prévisionnel. Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md).

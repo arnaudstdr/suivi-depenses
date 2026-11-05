@@ -1,5 +1,6 @@
 from enum import StrEnum
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -38,6 +39,13 @@ class Settings(BaseSettings):
 
     sentry_dsn: str | None = None
 
+    session_cookie_name: str = "suivi_session"
+    csrf_cookie_name: str = "suivi_csrf"
+    session_ttl_seconds: int = 2_592_000
+    invitation_ttl_seconds: int = 604_800
+    cookie_secure: bool | None = None
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+
     @property
     def database_url_effective(self) -> str:
         """URL SQLAlchemy effective, sans exposer le mot de passe dans les logs."""
@@ -57,14 +65,22 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.app_env is AppEnv.prod
 
+    @property
+    def cookie_secure_effective(self) -> bool:
+        if self.cookie_secure is not None:
+            return self.cookie_secure
+        return self.is_production
+
     @model_validator(mode="after")
-    def reject_default_password_in_production(self) -> "Settings":
+    def validate_production_settings(self) -> "Settings":
         if (
             self.is_production
             and self.database_url is None
             and self.postgres_password.get_secret_value() == "change-me-local-only"
         ):
             raise ValueError("POSTGRES_PASSWORD doit être défini en production.")
+        if self.cookie_samesite == "none" and not self.cookie_secure_effective:
+            raise ValueError("SameSite=None exige un cookie Secure.")
         return self
 
 
