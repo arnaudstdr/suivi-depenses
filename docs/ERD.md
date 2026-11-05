@@ -1,6 +1,6 @@
 # Diagramme entité-association — Suivi des dépenses
 
-**Version :** 0.1  
+**Version :** 0.2  
 **Statut :** Proposition technique à valider  
 **Référence :** `docs/DATA_MODEL.md` v0.2  
 **Base cible :** PostgreSQL
@@ -415,4 +415,4 @@ Les contraintes portant sur plusieurs lignes (somme des pourcentages, absence de
 
 ---
 
-**Fin — ERD.md v0.1**
+**Fin — ERD.md v0.2**
