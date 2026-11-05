@@ -304,6 +304,16 @@ Règles principales :
 - Les préférences sont propres à chaque utilisateur et à chaque type. Le Web
   Push est différé ; `push_enabled` est conservé pour la suite.
 
+## Phase 7 — sécurité HTTP
+
+Toutes les réponses ajoutent `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy` et `Permissions-Policy`. Les routes `/api/v1` et `/health`
+ajoutent une CSP restrictive ; `Strict-Transport-Security` est ajouté en
+production. Les réponses API restent en `Cache-Control: no-store`.
+
+Le cache hors ligne privé est géré par le frontend, jamais par le service
+worker sur `/api/v1`, et purgé à la déconnexion ou au changement de compte.
+
 ## Contrôles
 
 ```bash

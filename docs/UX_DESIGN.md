@@ -1,7 +1,7 @@
 # Design UX — Suivi des dépenses
 
-**Version :** 0.6  
-**Statut :** Direction UX validée, maquette à aligner  
+**Version :** 0.7
+**Statut :** Direction UX validée, frontend connecté et PWA
 **Référence métier :** SPECIFICATIONS.md v0.4
 
 ## 1. Principes
@@ -127,6 +127,8 @@ Les vues secondaires peuvent être des écrans de maquette navigables, mais les 
 - Les montants et statuts ne sont jamais différenciés uniquement par la couleur.
 - Afficher les états chargement, vide, erreur et hors ligne.
 
-## 10. Maquette
+## 10. Frontend et PWA
 
-La maquette React/Vite est une démonstration statique avec interactions locales. Elle ne persiste pas les données et n'appelle aucune API. Le jeu de données doit être fictif et cohérent avec les règles métier décrites ici.
+Le frontend React/Vite est connecté à l'API : connexion par session cookie, tableau de bord personnel, dépenses, charges récurrentes, budget courses, répartition et historique. Les montants sont reçus en centimes et convertis uniquement à l'affichage.
+
+La PWA est installable et met en cache les ressources statiques versionnées. Les données API déjà consultées sont conservées dans un cache privé, isolé par utilisateur et purgé à la déconnexion, à l'expiration de session et au changement de compte. Hors ligne, l'interface est en lecture seule : les mutations sont désactivées, aucune file d'écritures différées n'est créée, et l'état réseau ainsi que la date de dernière synchronisation sont affichés.

@@ -226,6 +226,8 @@ La V1 permet uniquement la consultation hors ligne des données déjà chargées
 
 Les pages contenant des données financières doivent éviter les stratégies de cache HTTP publiques. Le comportement sera vérifié sur Safari iOS et les navigateurs Chromium.
 
+Implémentation V1 : `vite-plugin-pwa` précache uniquement les ressources statiques et le shell. Le cache des réponses API est applicatif, réseau d'abord puis cache privé en secours, avec un nom de cache contenant l'identifiant utilisateur, un TTL de 24 h et une purge à la déconnexion, sur expiration de session ou changement de compte. Le service worker ne met aucune réponse `/api/v1` en cache et aucune écriture différée n'est créée.
+
 ## 8. Traitements asynchrones
 
 Celery est réservé aux traitements qui n'ont pas besoin de bloquer une réponse HTTP :

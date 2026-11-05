@@ -208,9 +208,9 @@ Créer des tests unitaires dédiés à ces cas, y compris les paiements juste av
 - Le backend FastAPI/SQLAlchemy/Alembic est présent dans `backend/`, avec les tables d'identité, de sécurité et le socle financier (`personal_balance_entries`, `categories`, `transactions`, `budgets`, `budget_periods`).
 - Les migrations Alembic, les tests backend, Docker Compose pour PostgreSQL, le Dockerfile API et la CI GitHub Actions sont présents.
 - Le socle sécurisé est implémenté : bootstrap CLI, sessions opaques, cookies sécurisés, CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et audit.
-- Les Phases 4 à 6 sont implémentées : solde, catégories, transactions, remboursements, budget courses, dépenses prévues, récurrences, génération automatique et idempotente des occurrences, confirmation des montants variables, skip motivé, corrections auditées, répartition, participation, contribution au foyer, historique des contributions, calcul du disponible prévisionnel, dashboard personnel, export CSV/XLSX, import avec prévisualisation et notifications in-app.
-- Le frontend possède les scripts npm `dev`, `build` et `preview`; il n'existe pas encore de script `lint` ou `test` déclaré dans son `package.json`.
+- Les Phases 4 à 7 sont implémentées : solde, catégories, transactions, remboursements, budget courses, dépenses prévues, récurrences, génération automatique et idempotente des occurrences, confirmation des montants variables, skip motivé, corrections auditées, répartition, participation, contribution au foyer, historique des contributions, calcul du disponible prévisionnel, dashboard personnel, export CSV/XLSX, import avec prévisualisation, notifications in-app, frontend connecté, PWA installable, cache privé et lecture hors ligne en lecture seule.
+- Le frontend possède les scripts npm `dev`, `build`, `preview`, `typecheck` et `test`; il n'existe pas encore de script `lint` déclaré dans son `package.json`.
 - Les commandes backend réellement disponibles sont documentées dans `backend/README.md` et dans le `Makefile`.
-- La prochaine phase est la Phase 7 : PWA, cache privé et lecture hors ligne.
+- La prochaine phase est la Phase 8 : déploiement ARM64, Caddy, sauvegardes et tests de restauration.
 
 Cette section doit être mise à jour lorsque l'architecture réelle du dépôt évolue. Ne pas créer des fichiers ou commandes manquants en supposant qu'ils existent.

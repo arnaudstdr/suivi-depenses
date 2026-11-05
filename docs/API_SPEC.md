@@ -312,3 +312,16 @@ Types initiaux : `invitation_accepted` et `import_completed`. Les préférences 
 
 Le Web Push est différé : le champ `push_enabled` est conservé pour la compatibilité future, mais aucun envoi push n'est effectué en V1.
 
+## 16. En-têtes de sécurité HTTP
+
+Toutes les réponses backend ajoutent :
+
+- `X-Content-Type-Options: nosniff` ;
+- `X-Frame-Options: DENY` ;
+- `Referrer-Policy: no-referrer` ;
+- `Permissions-Policy: geolocation=(), microphone=(), camera=()` ;
+- `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'` sur `/api/v1` et `/health` ;
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains` en production.
+
+Les réponses `/api/v1` conservent `Cache-Control: no-store`. Le cache privé hors ligne est géré côté application, avec purge à la déconnexion et au changement de compte ; il ne s'appuie pas sur le cache HTTP.
+
