@@ -1,6 +1,6 @@
 # Spécifications fonctionnelles — Suivi des dépenses
 
-**Version :** 0.4  
+**Version :** 0.5  
 **Statut :** Base fonctionnelle validée — à implémenter  
 **Application :** Web responsive / PWA  
 **Devise :** EUR
@@ -76,11 +76,21 @@ Champs :
 
 Exemples : abonnements, assurances, loyer, énergie, téléphonie, participation au foyer.
 
-### 4.1 Charges personnelles
+### 4.1 Pointage des échéances
+
+Chaque échéance récurrente est suivie individuellement. Après avoir constaté le prélèvement ou effectué le paiement, l'utilisateur la pointe explicitement comme payée depuis la liste des échéances ou son détail.
+
+Au pointage, l'utilisateur confirme la date réelle du paiement et le montant réellement débité. Pour un montant variable, le montant réel est obligatoire ; pour un montant fixe, le montant attendu est proposé et reste modifiable. Le pointage crée ou associe la transaction réelle et horodate le paiement (`paid_at`). Une échéance ne peut être pointée payée qu'une seule fois ; une correction ultérieure doit être une action explicite et auditée.
+
+Statuts d'une occurrence : `pending` (à venir / à payer), `confirmed` (montant confirmé, paiement pas encore pointé), `paid` (paiement pointé), `skipped` (échéance ignorée avec motif facultatif). L'interface propose l'action « Pointer comme payée » pour les échéances non payées.
+
+Le pointage ne retire pas automatiquement le montant du disponible prévisionnel : si le paiement est postérieur au dernier instantané de solde personnel, il reste déduit jusqu'à la prochaine saisie du solde qui l'intègre. Si le paiement est antérieur ou égal à cet instantané, il est déjà reflété et n'est pas déduit.
+
+### 4.2 Charges personnelles
 
 Une charge personnelle est déduite à 100 % du disponible personnel lorsqu'elle reste à payer sur le mois.
 
-### 4.2 Charges communes
+### 4.3 Charges communes
 
 Une charge commune est répartie selon les pourcentages configurés. La répartition par défaut actuelle est 55 % pour l'utilisateur et 45 % pour l'autre membre ; elle doit être modifiable.
 
@@ -195,6 +205,8 @@ La PWA permet l'installation sur mobile et desktop. En V1, les données déjà s
 - Le solde de départ est saisi manuellement et horodaté.
 - Les revenus futurs ne sont pas ajoutés au disponible.
 - Les charges récurrentes personnelles restant à payer sont déduites.
+- Chaque échéance récurrente peut être pointée individuellement comme payée avec son montant réel et sa date de paiement.
+- Le pointage d'une échéance payée après le dernier instantané de solde ne modifie pas à lui seul le disponible.
 - Les parts des charges communes et la contribution au budget courses sont agrégées dans une seule participation au foyer.
 - Le membre peut marquer explicitement son virement mensuel comme effectué ; le statut est historisé et ne change pas à lui seul le disponible.
 - Une sortie payée après le dernier instantané de solde reste déduite jusqu'à la saisie d'un nouveau solde qui l'intègre. Le marquage du virement de participation comme effectué ne modifie pas à lui seul le disponible prévisionnel.
@@ -206,4 +218,4 @@ La PWA permet l'installation sur mobile et desktop. En V1, les données déjà s
 
 ---
 
-**Fin — SPECIFICATIONS.md v0.4**
+**Fin — SPECIFICATIONS.md v0.5**
