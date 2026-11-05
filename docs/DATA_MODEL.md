@@ -82,6 +82,7 @@ Les catégories marquées is_grocery identifient les dépenses pouvant consommer
 | scope | VARCHAR(20) | personal / shared |
 | budget_id | UUID nullable | FK budgets |
 | transaction_date | DATE | NOT NULL |
+| paid_at | TIMESTAMPTZ nullable | date/heure réelle du paiement ; NULL si non payé |
 | status | VARCHAR(20) | paid |
 | original_transaction_id | UUID nullable | FK transactions pour remboursement |
 | notes | TEXT | nullable |
@@ -218,7 +219,7 @@ Le backend calcule pour un mois donné :
 
 `available_forecast_cents = latest_personal_balance_cents - personal_outflows_after_snapshot_cents - household_contributions_not_reflected_cents - personal_planned_expenses_not_reflected_cents`
 
-Le calcul utilise `recorded_at` comme date de coupure. Toute sortie effectivement payée après cet instantané est déduite, même si son statut est `paid` ou `transferred`. Une sortie payée avant ou à l'instantané est exclue, car elle est déjà intégrée au solde. Les engagements non payés restant dus sont également déduits. Les charges communes sont agrégées dans une seule ligne « Participation au foyer ». Les achats de courses communes restent exclus du calcul personnel : seule la contribution au budget courses est incluse dans la participation.
+Le calcul utilise `recorded_at` comme date de coupure. Pour les transactions, comparer `paid_at` à cet instantané ; ne pas utiliser uniquement `transaction_date`, qui représente la date métier et non l'instant réel de débit. Toute sortie effectivement payée après cet instantané est déduite, même si son statut est `paid` ou `transferred`. Une sortie payée avant ou à l'instantané est exclue, car elle est déjà intégrée au solde. Les engagements non payés restant dus sont également déduits. Les charges communes sont agrégées dans une seule ligne « Participation au foyer ». Les achats de courses communes restent exclus du calcul personnel : seule la contribution au budget courses est incluse dans la participation.
 
 Le statut de paiement et l'inclusion dans l'instantané bancaire sont deux notions distinctes. Marquer un virement comme effectué ne modifie donc pas le disponible à lui seul ; une nouvelle saisie du solde après le virement actualise la base et fait disparaître la déduction correspondante sans double comptage.
 
