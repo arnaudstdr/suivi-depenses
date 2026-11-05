@@ -1,112 +1,85 @@
 import { useState } from "react";
-import {
-  Wallet, LayoutDashboard, ArrowLeftRight, PiggyBank, Repeat2, Scale,
-  History, Settings, Bell, Plus, ChevronDown, Search, MoreHorizontal,
-  ShoppingBasket, House, Car, HeartPulse, Coffee, ArrowUpRight, ArrowDownRight,
-  CalendarDays, Menu, X, Utensils, CircleHelp
-} from "lucide-react";
+import { Wallet, LayoutDashboard, ArrowLeftRight, Repeat2, Scale, History, Settings, Bell, Plus, ChevronDown, CalendarDays, Menu, X, ShoppingBasket, House, Car, HeartPulse, Coffee, ArrowUpRight, ArrowDownRight, Pencil, Check, CircleHelp } from "lucide-react";
 
 type Context = "Personnel" | "Foyer";
-type Section = "Vue d'ensemble" | "Transactions" | "Budgets" | "Récurrences" | "Répartition" | "Historique";
-
+type Section = "Vue d'ensemble" | "Dépenses" | "Charges récurrentes" | "Budget courses" | "Répartition" | "Historique";
+type Scope = "personal" | "shared";
 const nav = [
-  { label: "Vue d'ensemble" as Section, icon: LayoutDashboard },
-  { label: "Transactions" as Section, icon: ArrowLeftRight },
-  { label: "Budgets" as Section, icon: PiggyBank },
-  { label: "Récurrences" as Section, icon: Repeat2 },
-  { label: "Répartition" as Section, icon: Scale },
-  { label: "Historique" as Section, icon: History },
+  {label:"Vue d'ensemble" as Section,icon:LayoutDashboard},{label:"Dépenses" as Section,icon:ArrowLeftRight},
+  {label:"Charges récurrentes" as Section,icon:Repeat2},{label:"Budget courses" as Section,icon:ShoppingBasket},
+  {label:"Répartition" as Section,icon:Scale},{label:"Historique" as Section,icon:History}
 ];
-
-const transactions = [
-  { title: "Courses alimentaires", category: "Alimentation", date: "Aujourd'hui · 09:42", amount: "− 68,40 €", icon: ShoppingBasket, tone: "purple", shared: false },
-  { title: "Abonnement transport", category: "Transport", date: "Hier · 18:20", amount: "− 42,00 €", icon: Car, tone: "blue", shared: false },
-  { title: "Pharmacie du centre", category: "Santé", date: "3 nov. · 11:15", amount: "− 16,80 €", icon: HeartPulse, tone: "rose", shared: false },
-  { title: "Café des Vosges", category: "Sorties", date: "2 nov. · 16:32", amount: "− 8,50 €", icon: Coffee, tone: "amber", shared: false },
+const euro=(v:number)=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(v);
+const recurring=[
+  {name:"Participation au foyer",detail:"Quote-part cumulée des charges communes",amount:300,due:"À venir",shared:true},
+  {name:"Téléphone",detail:"Abonnement mobile",amount:19.99,due:"08 nov.",shared:false},
+  {name:"Assurance auto",detail:"Prélèvement mensuel",amount:54.2,due:"12 nov.",shared:false},
+  {name:"Streaming",detail:"Abonnement",amount:13.99,due:"18 nov.",shared:false}
 ];
-
-const budgets = [
-  { name: "Alimentation", spent: 186.4, limit: 250, color: "violet" },
-  { name: "Transport", spent: 74, limit: 120, color: "blue" },
-  { name: "Sorties", spent: 42.5, limit: 80, color: "orange" },
-  { name: "Santé", spent: 16.8, limit: 60, color: "green" },
+const initial=[
+  {title:"Pharmacie",category:"Santé",date:"Aujourd'hui",amount:16.8,scope:"personal" as Scope,icon:HeartPulse,tone:"rose"},
+  {title:"Carburant",category:"Transport",date:"Hier",amount:42,scope:"personal" as Scope,icon:Car,tone:"blue"},
+  {title:"Courses alimentaires",category:"Courses",date:"3 nov.",amount:68.4,scope:"shared" as Scope,icon:ShoppingBasket,tone:"purple"},
+  {title:"Café",category:"Sorties",date:"2 nov.",amount:8.5,scope:"personal" as Scope,icon:Coffee,tone:"amber"}
 ];
-
-function euro(value: number) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
-}
-
-function App() {
-  const [context, setContext] = useState<Context>("Personnel");
-  const [section, setSection] = useState<Section>("Vue d'ensemble");
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
-  const isPersonal = context === "Personnel";
-
-  return (
-    <div className="app-shell">
-      <aside className={`sidebar ${mobileMenu ? "sidebar-open" : ""}`}>
-        <div className="brand"><div className="brand-mark"><Wallet size={21}/></div><span>mes<strong>dépenses</strong></span><button className="icon-btn close-menu" onClick={() => setMobileMenu(false)} aria-label="Fermer"><X size={19}/></button></div>
-        <div className="workspace-label">ESPACE</div>
-        <div className="context-switch">
-          <div className="avatar">{isPersonal ? "A" : "F"}</div>
-          <div className="context-copy"><strong>{isPersonal ? "Mon espace" : "Notre foyer"}</strong><span>{isPersonal ? "Vue personnelle" : "Vue partagée"}</span></div>
-          <ChevronDown size={16} className="muted"/>
-          <select aria-label="Changer de contexte" value={context} onChange={e => setContext(e.target.value as Context)}>
-            <option>Personnel</option><option>Foyer</option>
-          </select>
-        </div>
-        <nav className="main-nav">
-          <div className="nav-caption">GESTION</div>
-          {nav.map(item => { const Icon = item.icon; return <button key={item.label} className={`nav-item ${section === item.label ? "active" : ""}`} onClick={() => { setSection(item.label); setMobileMenu(false); }}><Icon size={18}/><span>{item.label}</span>{item.label === "Transactions" && <span className="nav-count">12</span>}</button>; })}
-        </nav>
-        <div className="sidebar-bottom">
-          <button className="nav-item"><Settings size={18}/><span>Paramètres</span></button>
-          <div className="profile"><div className="avatar avatar-small">A</div><div><strong>Arnaud</strong><span>Compte personnel</span></div><MoreHorizontal size={18} className="muted"/></div>
-        </div>
-      </aside>
-
-      {mobileMenu && <button className="mobile-scrim" onClick={() => setMobileMenu(false)} aria-label="Fermer le menu"/>}
-
-      <main className="main-area">
-        <header className="topbar">
-          <button className="icon-btn mobile-menu-btn" onClick={() => setMobileMenu(true)} aria-label="Ouvrir le menu"><Menu size={21}/></button>
-          <div className="breadcrumb"><span>Mon espace</span><span className="crumb-sep">/</span><strong>{section}</strong></div>
-          <div className="top-actions"><div className="period"><CalendarDays size={16}/><span>Novembre 2026</span><ChevronDown size={14}/></div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={19}/><i/></button><button className="add-button" onClick={() => setShowAdd(true)}><Plus size={18}/> <span>Ajouter une dépense</span></button></div>
-        </header>
-
-        {section === "Vue d'ensemble" ? (
-          <div className="page-content">
-            <div className="page-heading"><div><div className="eyebrow">JEUDI 5 NOVEMBRE 2026</div><h1>Bonjour Arnaud</h1><p>Voici le résumé de tes finances personnelles.</p></div><button className="outline-button"><CalendarDays size={16}/> Ce mois-ci <ChevronDown size={14}/></button></div>
-            <section className="summary-grid">
-              <article className="summary-card primary-card"><div className="card-top"><span>Dépenses du mois</span><span className="card-icon"><ArrowDownRight size={18}/></span></div><div className="big-number">684,70 €</div><div className="card-foot"><span className="trend negative"><ArrowUpRight size={14}/> 8,2 %</span><span>vs mois dernier</span></div><div className="primary-decoration"/></article>
-              <article className="summary-card"><div className="card-top"><span>Budgets consommés</span><span className="soft-icon violet"><PiggyBank size={18}/></span></div><div className="big-number dark-number">319,70 € <small>/ 510 €</small></div><div className="progress-track"><span className="progress-fill violet-fill" style={{width:"62.7%"}}/></div><div className="card-foot"><span>62,7 % utilisé</span><strong>190,30 € restants</strong></div></article>
-              <article className="summary-card"><div className="card-top"><span>Transactions</span><span className="soft-icon blue"><ArrowLeftRight size={18}/></span></div><div className="big-number dark-number">24</div><div className="card-foot"><span>Ce mois-ci</span><strong className="positive">+ 3 vs octobre</strong></div><div className="mini-bars"><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
-            </section>
-
-            <section className="content-grid">
-              <article className="panel budget-panel"><div className="panel-heading"><div><h2>Mes budgets</h2><p>Suivi de tes enveloppes mensuelles</p></div><button className="text-link" onClick={() => setSection("Budgets")}>Tout voir <ArrowUpRight size={15}/></button></div><div className="budget-list">{budgets.map(b => <div className="budget-row" key={b.name}><div className={`budget-symbol ${b.color}`}>{b.name === "Alimentation" ? <ShoppingBasket size={17}/> : b.name === "Transport" ? <Car size={17}/> : b.name === "Sorties" ? <Coffee size={17}/> : <HeartPulse size={17}/>}</div><div className="budget-info"><div className="budget-line"><strong>{b.name}</strong><span>{euro(b.spent)} <small>/ {euro(b.limit)}</small></span></div><div className="progress-track"><span className={`progress-fill ${b.color}-fill`} style={{width:`${Math.min(100,b.spent/b.limit*100)}%`}}/></div></div><span className="budget-percent">{Math.round(b.spent/b.limit*100)}%</span></div>)}</div></article>
-
-              <article className="panel chart-panel"><div className="panel-heading"><div><h2>Répartition des dépenses</h2><p>Par catégorie · Novembre 2026</p></div><button className="icon-btn"><MoreHorizontal size={19}/></button></div><div className="chart-wrap"><div className="donut"><div className="donut-center"><strong>684,70 €</strong><span>Total dépensé</span></div></div><div className="legend"><div><i className="dot d-violet"/><span>Alimentation</span><strong>32 %</strong></div><div><i className="dot d-blue"/><span>Transport</span><strong>24 %</strong></div><div><i className="dot d-orange"/><span>Logement</span><strong>21 %</strong></div><div><i className="dot d-green"/><span>Autres</span><strong>23 %</strong></div></div></div></article>
-            </section>
-
-            <section className="content-grid lower-grid">
-              <article className="panel transactions-panel"><div className="panel-heading"><div><h2>Dernières transactions</h2><p>Tes opérations récentes</p></div><button className="text-link" onClick={() => setSection("Transactions")}>Voir tout <ArrowUpRight size={15}/></button></div><div className="transaction-list">{transactions.map((t,i) => {const Icon=t.icon;return <div className="transaction-row" key={t.title}><div className={`transaction-symbol ${t.tone}`}><Icon size={17}/></div><div className="transaction-main"><strong>{t.title}</strong><span>{t.category} · {t.date}</span></div><strong className="transaction-amount">{t.amount}</strong></div>;})}</div></article>
-              <article className="panel upcoming-panel"><div className="panel-heading"><div><h2>À venir</h2><p>Prochaines dépenses prévues</p></div><button className="icon-btn"><MoreHorizontal size={19}/></button></div><div className="upcoming-item"><div className="date-tile"><strong>08</strong><span>NOV</span></div><div className="upcoming-copy"><strong>Assurance habitation</strong><span>Prélèvement automatique</span></div><strong>− 24,90 €</strong></div><div className="upcoming-item"><div className="date-tile"><strong>12</strong><span>NOV</span></div><div className="upcoming-copy"><strong>Abonnement internet</strong><span>Montant confirmé</span></div><strong>− 39,99 €</strong></div><div className="upcoming-note"><CircleHelp size={15}/> Prévisions indicatives, non encore débitées.</div></article>
-            </section>
-            <div className="dashboard-footer"><span>Données fictives · Maquette UX</span><span>Dernière synchronisation : aujourd'hui à 09:42</span></div>
-          </div>
-        ) : (
-          <div className="page-content placeholder-page"><div className="page-heading"><div><div className="eyebrow">ESPACE PERSONNEL</div><h1>{section}</h1><p>Cette vue sera détaillée dans la prochaine étape de la maquette.</p></div></div><div className="panel placeholder-panel"><div className="placeholder-icon"><LayoutDashboard size={28}/></div><h2>{section}</h2><p>Écran de démonstration en cours de conception.</p><button className="outline-button" onClick={() => setSection("Vue d'ensemble")}>Retour au tableau de bord</button></div></div>
-        )}
-      </main>
-
-      <nav className="mobile-bottom-nav">
-        {nav.slice(0,4).map(item => {const Icon=item.icon;return <button key={item.label} className={section===item.label?"selected":""} onClick={()=>setSection(item.label)}><Icon size={19}/><span>{item.label==="Vue d'ensemble"?"Accueil":item.label==="Transactions"?"Opérations":item.label}</span></button>;})}
-      </nav>
-
-      {showAdd && <div className="modal-backdrop" onClick={() => setShowAdd(false)}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-heading"><div><h2>Nouvelle dépense</h2><p>Ajoute une opération à ton espace personnel.</p></div><button className="icon-btn" onClick={() => setShowAdd(false)}><X size={19}/></button></div><label>Libellé<input placeholder="Ex. Courses alimentaires"/></label><div className="form-two"><label>Montant (€)<input type="number" placeholder="0,00"/></label><label>Date<input type="date" defaultValue="2026-11-05"/></label></div><label>Catégorie<select defaultValue="Alimentation"><option>Alimentation</option><option>Transport</option><option>Logement</option><option>Santé</option><option>Loisirs</option></select></label><div className="modal-actions"><button className="outline-button" onClick={() => setShowAdd(false)}>Annuler</button><button className="add-button" onClick={() => setShowAdd(false)}>Enregistrer la dépense</button></div><p className="demo-disclaimer">Maquette : aucune donnée n'est enregistrée.</p></div></div>}
-    </div>
-  );
+function App(){
+ const [context,setContext]=useState<Context>("Personnel"),[section,setSection]=useState<Section>("Vue d'ensemble");
+ const [mobileMenu,setMobileMenu]=useState(false),[showAdd,setShowAdd]=useState(false),[showBalance,setShowBalance]=useState(false);
+ const [balance,setBalance]=useState(1500),[balanceInput,setBalanceInput]=useState("1500"),[grocerySpent,setGrocerySpent]=useState(205.8);
+ const [transactions,setTransactions]=useState(initial);
+ const [form,setForm]=useState({label:"",amount:"",category:"Autre",scope:"personal" as Scope});
+ const personal=true, householdShare=300, personalRecurring=88.18, planned=107.5;
+ const available=balance-householdShare-personalRecurring-planned, groceryLeft=490-grocerySpent;
+ const isPersonal=context==="Personnel";
+ function addTransaction(){
+  const amount=Number(form.amount);if(!form.label.trim()||!Number.isFinite(amount)||amount<=0)return;
+  if(form.scope==="shared"&&form.category==="Courses")setGrocerySpent(v=>v+amount);
+  const Icon=form.category==="Courses"?ShoppingBasket:form.category==="Transport"?Car:form.category==="Santé"?HeartPulse:Coffee;
+  setTransactions(v=>[{title:form.label,category:form.category,date:"À l'instant",amount,scope:form.scope,icon:Icon,tone:form.scope==="shared"?"purple":"blue"},...v]);
+  setForm({label:"",amount:"",category:"Autre",scope:"personal"});setShowAdd(false);
+ }
+ const displayed=transactions.filter(t=>isPersonal?t.scope==="personal":t.scope==="shared");
+ return <div className="app-shell">
+  <aside className={`sidebar ${mobileMenu?"sidebar-open":""}`}>
+   <div className="brand"><div className="brand-mark"><Wallet size={21}/></div><span>mes<strong>dépenses</strong></span><button className="icon-btn close-menu" onClick={()=>setMobileMenu(false)} aria-label="Fermer"><X size={19}/></button></div>
+   <div className="workspace-label">ESPACE</div><div className="context-switch"><div className="avatar">{isPersonal?"A":"F"}</div><div className="context-copy"><strong>{isPersonal?"Mon espace":"Notre foyer"}</strong><span>{isPersonal?"Vue personnelle":"Vue partagée"}</span></div><ChevronDown size={16} className="muted"/><select aria-label="Changer de contexte" value={context} onChange={e=>setContext(e.target.value as Context)}><option>Personnel</option><option>Foyer</option></select></div>
+   <nav className="main-nav"><div className="nav-caption">GESTION</div>{nav.map(item=>{const Icon=item.icon;return <button key={item.label} className={`nav-item ${section===item.label?"active":""}`} onClick={()=>{setSection(item.label);setMobileMenu(false)}}><Icon size={18}/><span>{item.label}</span></button>})}</nav>
+   <div className="sidebar-bottom"><button className="nav-item"><Settings size={18}/><span>Paramètres</span></button><div className="profile"><div className="avatar avatar-small">A</div><div><strong>Compte personnel</strong><span>Utilisateur</span></div></div></div>
+  </aside>
+  {mobileMenu&&<button className="mobile-scrim" onClick={()=>setMobileMenu(false)} aria-label="Fermer le menu"/>}
+  <main className="main-area">
+   <header className="topbar"><button className="icon-btn mobile-menu-btn" onClick={()=>setMobileMenu(true)} aria-label="Ouvrir le menu"><Menu size={21}/></button><div className="breadcrumb"><span>{isPersonal?"Mon espace":"Notre foyer"}</span><span className="crumb-sep">/</span><strong>{section}</strong></div><div className="top-actions"><div className="period"><CalendarDays size={16}/><span>Novembre 2026</span><ChevronDown size={14}/></div><button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={19}/></button><button className="add-button" onClick={()=>setShowAdd(true)}><Plus size={18}/><span>Ajouter une dépense</span></button></div></header>
+   {section==="Vue d'ensemble"?<div className="page-content">
+    <div className="page-heading"><div><div className="eyebrow">NOVEMBRE 2026</div><h1>{isPersonal?"Mon budget personnel":"Budget du foyer"}</h1><p>{isPersonal?"Ton disponible prévisionnel jusqu'à la fin du mois.":"Les charges communes et le budget courses."}</p></div>{isPersonal&&<button className="outline-button" onClick={()=>{setBalanceInput(String(balance));setShowBalance(true)}}><Pencil size={15}/> Modifier le solde</button>}</div>
+    {isPersonal?<>
+     <section className="summary-grid">
+      <article className="summary-card primary-card"><div className="card-top"><span>Disponible prévisionnel</span><span className="card-icon"><Wallet size={18}/></span></div><div className="big-number">{euro(available)}</div><div className="card-foot">Après déduction des charges à venir</div><div className="primary-decoration"/></article>
+      <article className="summary-card"><div className="card-top"><span>Solde du compte personnel</span><span className="soft-icon violet"><Wallet size={18}/></span></div><div className="big-number dark-number">{euro(balance)}</div><div className="card-foot"><span>Saisie manuelle</span><strong>05 nov. · 09:30</strong></div></article>
+      <article className="summary-card"><div className="card-top"><span>Charges restantes</span><span className="soft-icon blue"><ArrowDownRight size={18}/></span></div><div className="big-number dark-number">{euro(householdShare+personalRecurring+planned)}</div><div className="card-foot">À déduire ce mois-ci</div></article>
+     </section>
+     <section className="content-grid">
+      <article className="panel"><div className="panel-heading"><div><h2>Ce qui reste à payer</h2><p>Une seule ligne pour ta participation au foyer</p></div><button className="text-link" onClick={()=>setSection("Charges récurrentes")}>Voir les charges <ArrowUpRight size={15}/></button></div>
+       <div className="deduction-list"><div className="deduction-row"><div className="budget-symbol violet"><House size={17}/></div><div className="deduction-copy"><strong>Participation au foyer</strong><span>Ta part des charges communes · 55 %</span></div><strong>{euro(householdShare)}</strong></div>
+       <div className="deduction-row"><div className="budget-symbol blue"><Repeat2 size={17}/></div><div className="deduction-copy"><strong>Charges personnelles</strong><span>Abonnements et prélèvements à venir</span></div><strong>{euro(personalRecurring)}</strong></div>
+       <div className="deduction-row"><div className="budget-symbol orange"><CalendarDays size={17}/></div><div className="deduction-copy"><strong>Dépenses ponctuelles prévues</strong><span>Non encore payées</span></div><strong>{euro(planned)}</strong></div></div>
+      </article>
+      <article className="panel grocery-panel"><div className="panel-heading"><div><h2>Budget courses du foyer</h2><p>Enveloppe commune · Novembre</p></div><span className="soft-icon violet"><ShoppingBasket size={18}/></span></div><div className="grocery-total"><strong>{euro(groceryLeft)}</strong><span>restants sur {euro(490)}</span></div><div className="progress-track"><span className="progress-fill violet-fill" style={{width:`${grocerySpent/490*100}%`}}/></div><div className="card-foot"><span>{euro(grocerySpent)} dépensés</span><strong>{Math.round(grocerySpent/490*100)} % utilisé</strong></div><p className="grocery-note"><CircleHelp size={14}/> Les courses communes ne sont pas déduites de ton disponible personnel.</p></article>
+     </section>
+     <section className="content-grid lower-grid">
+      <article className="panel"><div className="panel-heading"><div><h2>Charges récurrentes</h2><p>Prochaines échéances</p></div><button className="text-link" onClick={()=>setSection("Charges récurrentes")}>Tout voir <ArrowUpRight size={15}/></button></div><div className="transaction-list">{recurring.map(x=><div className="transaction-row" key={x.name}><div className={`transaction-symbol ${x.shared?"purple":"blue"}`}>{x.shared?<House size={17}/>:<Repeat2 size={17}/>}</div><div className="transaction-main"><strong>{x.name}</strong><span>{x.detail} · {x.due}</span></div><strong className="transaction-amount">{euro(x.amount)}</strong></div>)}</div></article>
+      <article className="panel"><div className="panel-heading"><div><h2>Dernières dépenses personnelles</h2><p>Les dépenses communes sont exclues</p></div><button className="text-link" onClick={()=>setSection("Dépenses")}>Tout voir <ArrowUpRight size={15}/></button></div><div className="transaction-list">{displayed.slice(0,4).map((t,i)=>{const Icon=t.icon;return <div className="transaction-row" key={t.title+i}><div className={`transaction-symbol ${t.tone}`}><Icon size={17}/></div><div className="transaction-main"><strong>{t.title}</strong><span>{t.category} · {t.date}</span></div><strong className="transaction-amount">− {euro(t.amount)}</strong></div>})}</div></article>
+     </section>
+    </>:<>
+     <section className="summary-grid"><article className="summary-card primary-card"><div className="card-top"><span>Budget courses</span><span className="card-icon"><ShoppingBasket size={18}/></span></div><div className="big-number">{euro(groceryLeft)}</div><div className="card-foot">Restants sur {euro(490)}</div><div className="primary-decoration"/></article><article className="summary-card"><div className="card-top"><span>Charges communes</span><span className="soft-icon violet"><House size={18}/></span></div><div className="big-number dark-number">{euro(545)}</div><div className="card-foot">Exemple de total mensuel</div></article><article className="summary-card"><div className="card-top"><span>Répartition actuelle</span><span className="soft-icon blue"><Scale size={18}/></span></div><div className="big-number dark-number">55 / 45</div><div className="card-foot">Utilisateur / autre membre</div></article></section>
+     <section className="content-grid"><article className="panel grocery-panel"><div className="panel-heading"><div><h2>Enveloppe courses</h2><p>Budget mensuel partagé</p></div></div><div className="grocery-total"><strong>{euro(groceryLeft)}</strong><span>restants sur {euro(490)}</span></div><div className="progress-track"><span className="progress-fill violet-fill" style={{width:`${grocerySpent/490*100}%`}}/></div><div className="card-foot"><span>{euro(grocerySpent)} dépensés</span><strong>{Math.round(grocerySpent/490*100)} % utilisé</strong></div></article><article className="panel"><div className="panel-heading"><div><h2>Contribution au budget courses</h2><p>Répartition 55 / 45</p></div></div><div className="deduction-row"><div className="deduction-copy"><strong>Ta part · 55 %</strong></div><strong>{euro(269.5)}</strong></div><div className="deduction-row"><div className="deduction-copy"><strong>Autre membre · 45 %</strong></div><strong>{euro(220.5)}</strong></div></article></section>
+     <article className="panel"><div className="panel-heading"><div><h2>Dépenses communes de courses</h2><p>Chaque achat diminue uniquement l'enveloppe commune</p></div></div><div className="transaction-list">{displayed.filter(t=>t.category==="Courses").map((t,i)=><div className="transaction-row" key={t.title+i}><div className="transaction-symbol purple"><ShoppingBasket size={17}/></div><div className="transaction-main"><strong>{t.title}</strong><span>{t.date}</span></div><strong className="transaction-amount">− {euro(t.amount)}</strong></div>)}</div></article>
+    </>}
+    <div className="dashboard-footer"><span>Données fictives · Maquette UX</span><span>Solde saisi manuellement · Aucune connexion bancaire</span></div>
+   </div>:<div className="page-content placeholder-page"><div className="page-heading"><div><div className="eyebrow">{isPersonal?"ESPACE PERSONNEL":"ESPACE FOYER"}</div><h1>{section}</h1><p>Cette vue sera détaillée dans la prochaine étape de la maquette.</p></div><button className="add-button" onClick={()=>setShowAdd(true)}><Plus size={16}/> Ajouter</button></div><div className="panel placeholder-panel"><div className="placeholder-icon"><LayoutDashboard size={28}/></div><h2>{section}</h2><p>Écran de démonstration en cours de conception.</p><button className="outline-button" onClick={()=>setSection("Vue d'ensemble")}>Retour au tableau de bord</button></div></div>}
+  </main>
+  <nav className="mobile-bottom-nav">{nav.slice(0,4).map(item=>{const Icon=item.icon;return <button key={item.label} className={section===item.label?"selected":""} onClick={()=>setSection(item.label)}><Icon size={19}/><span>{item.label==="Vue d'ensemble"?"Accueil":item.label==="Dépenses"?"Dépenses":item.label==="Charges récurrentes"?"Charges":"Courses"}</span></button>})}</nav>
+  {showBalance&&<div className="modal-backdrop" onClick={()=>setShowBalance(false)}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-heading"><div><h2>Mettre à jour le solde</h2><p>Solde réel de ton compte courant personnel.</p></div><button className="icon-btn" onClick={()=>setShowBalance(false)}><X size={19}/></button></div><label>Solde actuel (€)<input type="number" step="0.01" value={balanceInput} onChange={e=>setBalanceInput(e.target.value)}/></label><div className="modal-actions"><button className="outline-button" onClick={()=>setShowBalance(false)}>Annuler</button><button className="add-button" onClick={()=>{const v=Number(balanceInput);if(Number.isFinite(v)){setBalance(v);setShowBalance(false)}}}><Check size={16}/> Enregistrer</button></div><p className="demo-disclaimer">Maquette : la saisie n'est pas conservée après rechargement.</p></div></div>}
+  {showAdd&&<div className="modal-backdrop" onClick={()=>setShowAdd(false)}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-heading"><div><h2>Nouvelle dépense</h2><p>Choisis si la dépense est personnelle ou commune.</p></div><button className="icon-btn" onClick={()=>setShowAdd(false)}><X size={19}/></button></div><label>Libellé<input placeholder="Ex. Courses de la semaine" value={form.label} onChange={e=>setForm({...form,label:e.target.value})}/></label><div className="form-two"><label>Montant (€)<input type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label><label>Catégorie<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>Autre</option><option>Courses</option><option>Transport</option><option>Santé</option><option>Loisirs</option></select></label></div><label>Type de dépense<select value={form.scope} onChange={e=>setForm({...form,scope:e.target.value as Scope})}><option value="personal">Personnelle</option><option value="shared">Commune</option></select></label>{form.scope==="shared"&&form.category==="Courses"&&<p className="form-hint">Déduite du budget courses commun, pas du disponible personnel.</p>}{form.scope==="shared"&&form.category!=="Courses"&&<p className="form-hint">Répartie selon la règle du foyer et intégrée à la participation au foyer.</p>}<div className="modal-actions"><button className="outline-button" onClick={()=>setShowAdd(false)}>Annuler</button><button className="add-button" onClick={addTransaction}>Enregistrer</button></div><p className="demo-disclaimer">Maquette : aucune donnée n'est enregistrée durablement.</p></div></div>}
+ </div>;
 }
 export default App;
