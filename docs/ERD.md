@@ -1,6 +1,6 @@
 # Diagramme entité-association — Suivi des dépenses
 
-**Version :** 0.2  
+**Version :** 0.3  
 **Statut :** Proposition technique à valider  
 **Référence :** `docs/DATA_MODEL.md` v0.2  
 **Base cible :** PostgreSQL
@@ -16,7 +16,7 @@ Ce diagramme formalise les relations entre les entités métier. Il constitue un
 - Une règle de répartition peut être la règle par défaut du foyer ou cibler une catégorie, une dépense récurrente ou une transaction ponctuelle.
 - Un calcul mensuel est un instantané global qui contient les bases de revenus utilisées, les charges réparties et les montants attribués à chaque membre.
 - Les snapshots historiques ne sont jamais recalculés silencieusement.
-- Les paramètres de confidentialité sont distincts des données financières auxquelles ils s'appliquent.
+- Les paramètres de confidentialité sont globaux par utilisateur, indépendamment du foyer auquel il appartient.
 
 ## 2. Diagramme global
 
@@ -76,6 +76,7 @@ erDiagram
         uuid user_id FK
         uuid paid_by_user_id FK
         uuid category_id FK
+        uuid original_transaction_id FK
         varchar label
         bigint amount_cents
         varchar transaction_type
@@ -196,6 +197,10 @@ erDiagram
         uuid allocation_run_id FK
         uuid transaction_id FK
         uuid allocation_rule_id FK
+        uuid recurring_occurrence_id FK
+        varchar source_type
+        varchar label
+        date due_date
         bigint amount_cents
         varchar calculation_method
     }
@@ -296,7 +301,8 @@ erDiagram
     ALLOCATION_RUNS ||--o{ ALLOCATION_INCOME_SNAPSHOTS : "fige les revenus"
     USERS ||--o{ ALLOCATION_INCOME_SNAPSHOTS : "concerne"
     ALLOCATION_RUNS ||--o{ ALLOCATION_CHARGES : "regroupe"
-    TRANSACTIONS ||--o| ALLOCATION_CHARGES : "est répartie"
+    TRANSACTIONS o|--o{ ALLOCATION_CHARGES : "charge réelle"
+    RECURRING_OCCURRENCES o|--o{ ALLOCATION_CHARGES : "charge prévisionnelle"
     ALLOCATION_RULES o|--o{ ALLOCATION_CHARGES : "règle appliquée"
     ALLOCATION_CHARGES ||--o{ ALLOCATION_ITEMS : "ventile"
     USERS ||--o{ ALLOCATION_ITEMS : "reçoit une part"
@@ -317,7 +323,7 @@ erDiagram
 
 - Un utilisateur peut appartenir à un ou plusieurs foyers à terme ; la V1 n'en utilise qu'un.
 - L'appartenance passe par `household_members`, qui porte le rôle et l'état d'activité.
-- Les paramètres de confidentialité sont individuels et ne sont pas stockés sur le foyer.
+- Les paramètres de confidentialité sont globaux par utilisateur : un même réglage s'applique quel que soit le foyer auquel la personne appartient.
 
 ### 3.2 Transactions et périmètres
 
@@ -338,6 +344,7 @@ erDiagram
 
 - Une définition récurrente génère des occurrences datées.
 - Une occurrence peut ne pas produire de transaction (en attente, ignorée ou non payée).
+- Une occurrence peut servir de source à une charge prévisionnelle avant paiement.
 - Une occurrence payée référence une transaction unique.
 - La relation est portée uniquement par `recurring_occurrences.transaction_id`. Le champ inverse `transactions.recurring_occurrence_id` du modèle v0.2 est à supprimer pour éviter une FK circulaire.
 - Contrainte recommandée : `UNIQUE(transaction_id)` sur `recurring_occurrences`, en plus de `UNIQUE(recurring_expense_id, period_date)`.
@@ -363,10 +370,12 @@ Le calcul est modélisé comme un lot mensuel :
 
 1. `allocation_runs` représente le calcul d'un foyer sur une période.
 2. `allocation_income_snapshots` conserve la base de revenu admissible par membre, sans obliger à exposer les revenus privés.
-3. `allocation_charges` représente chaque transaction commune répartie et conserve la règle effectivement appliquée.
+3. `allocation_charges` représente chaque charge répartie, réelle ou prévisionnelle, et conserve la règle effectivement appliquée. Une charge réelle référence une transaction ; une charge prévisionnelle peut référencer une occurrence récurrente ou être saisie manuellement.
 4. `allocation_items` conserve la part calculée pour chaque membre et chaque charge.
 
-Cette granularité permet d'appliquer plusieurs règles au cours d'un même mois. Elle remplace la relation trop restrictive `monthly_allocations.allocation_rule_id` du modèle v0.2.
+Cette granularité permet d'appliquer plusieurs règles au cours d'un même mois. Une charge porte un `source_type` (`actual_transaction`, `recurring_occurrence` ou `manual_forecast`). Une contrainte CHECK garantit la cohérence des références de source.
+
+Un seul calcul définitif est conservé par foyer et par période. Une fois finalisé, le calcul et ses lignes sont immuables. Toute correction doit être explicite et auditée. Cette structure remplace la relation trop restrictive `monthly_allocations.allocation_rule_id` du modèle v0.2.
 
 Les snapshots contenant des données financières sensibles nécessitent des autorisations de lecture strictes. Le JSONB ne doit pas devenir un moyen de contourner les règles de confidentialité.
 
@@ -376,7 +385,7 @@ Les snapshots contenant des données financières sensibles nécessitent des aut
 |---|---|
 | `household_members` | UNIQUE (`household_id`, `user_id`) |
 | `financial_privacy_settings` | UNIQUE (`user_id`) |
-| `transactions` | `amount_cents > 0` |
+| `transactions` | `amount_cents > 0` ; `original_transaction_id` est renseigné uniquement pour un remboursement et référence la dépense d'origine |
 | `budgets` | exactement un propriétaire : `household_id` ou `user_id` |
 | `budget_periods` | UNIQUE (`budget_id`, `period_start`) ; `period_end >= period_start` |
 | `recurring_occurrences` | UNIQUE (`recurring_expense_id`, `period_date`) ; UNIQUE (`transaction_id`) |
@@ -385,7 +394,7 @@ Les snapshots contenant des données financières sensibles nécessitent des aut
 | `allocation_rule_targets` | exactement une cible renseignée |
 | `allocation_runs` | UNIQUE (`household_id`, `period_start`, `period_end`) si un seul calcul final est conservé par période |
 | `allocation_income_snapshots` | UNIQUE (`allocation_run_id`, `user_id`) |
-| `allocation_charges` | UNIQUE (`allocation_run_id`, `transaction_id`) |
+| `allocation_charges` | UNIQUE (`allocation_run_id`, `transaction_id`) lorsque non NULL ; source cohérente avec `source_type` ; montant positif |
 | `allocation_items` | UNIQUE (`allocation_charge_id`, `user_id`) |
 | `notification_preferences` | UNIQUE (`user_id`, `notification_type`) |
 
@@ -404,15 +413,15 @@ Les contraintes portant sur plusieurs lignes (somme des pourcentages, absence de
 
 > Le nombre de 21 entités correspond au diagramme proposé, après ajout de `allocation_rule_targets` et remplacement des deux tables de calcul v0.2 par quatre tables. Ce comptage devra être revérifié à la création du schéma SQL.
 
-## 6. Points à valider avant le schéma physique
+## 6. Décisions fonctionnelles validées
 
-1. **Une seule exécution mensuelle ou plusieurs versions ?** Le diagramme suppose une exécution finale unique par foyer et période. Si l'on doit conserver des simulations ou recalculs successifs, ajouter un numéro de version et un statut de publication.
-2. **Périmètre des charges réparties :** le diagramme répartit les transactions communes réelles. Confirmer si des charges prévisionnelles non encore payées doivent aussi apparaître.
-3. **Priorité des règles :** confirmer l'ordre entre règle par transaction, règle par dépense récurrente, règle par catégorie et règle par défaut du foyer.
-4. **Remboursements :** décider si un remboursement doit être relié à la dépense d'origine, tout en restant une transaction distincte.
-5. **Revenus :** confirmer si `incomes` décrit uniquement la base déclarative de répartition ou doit aussi gérer une prévision de trésorerie.
-6. **Confidentialité multi-foyer :** si un utilisateur peut rejoindre plusieurs foyers, décider si les réglages de confidentialité restent globaux ou deviennent propres à chaque foyer.
+1. **Calcul mensuel :** une seule version définitive par foyer et par mois.
+2. **Charges réparties :** charges réelles et prévisionnelles. Une prévision peut provenir d'une occurrence récurrente ou être saisie manuellement.
+3. **Priorité des règles :** transaction ponctuelle, dépense récurrente, catégorie, puis règle générale du foyer.
+4. **Remboursements :** transaction distincte reliée à la dépense d'origine par `original_transaction_id`. Plusieurs remboursements partiels peuvent référencer la même dépense.
+5. **Revenus :** uniquement une base de calcul des répartitions, pas une prévision de trésorerie.
+6. **Confidentialité :** réglages globaux par utilisateur, indépendamment du foyer.
 
 ---
 
-**Fin — ERD.md v0.2**
+**Fin — ERD.md v0.3**
