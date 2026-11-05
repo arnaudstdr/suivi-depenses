@@ -1,7 +1,7 @@
 # Architecture technique — Suivi des dépenses
 
 **Version :** 0.1  
-**Statut :** Proposition technique à valider  
+**Statut :** Proposition technique avec décisions d'hébergement et de monitoring validées  
 **Références :** `SPECIFICATIONS.md`, `DATA_MODEL.md`, `ERD.md` v0.3, `API_SPEC.md` v0.2
 
 ## 1. Objectifs d'architecture
@@ -297,6 +297,8 @@ Le push est best-effort ; l'application ne doit pas dépendre de sa livraison po
 
 ## 12. Déploiement
 
+**Hébergement retenu : Raspberry Pi 5 en auto-hébergement local.** Le Pi héberge les conteneurs Docker Compose et les données persistantes. Pour PostgreSQL, privilégier un SSD externe USB 3 plutôt qu'une carte microSD seule. Prévoir une alimentation stable et, idéalement, un onduleur permettant un arrêt propre.
+
 Environnement Docker Compose cible :
 
 | Service | Rôle | Exposition |
@@ -313,13 +315,27 @@ Les conteneurs applicatifs ne tournent pas en root lorsque cela est possible. Le
 
 Les environnements local, test et production utilisent des configurations distinctes. Le fichier `.env.example` documente uniquement les noms de variables et valeurs non sensibles.
 
+### Sauvegardes et restauration
+
+La stratégie retenue comme proposition est une approche 3-2-1 : trois copies, deux supports différents et une copie hors site.
+
+- **Base PostgreSQL :** sauvegarde logique quotidienne avec `pg_dump` au format custom, cohérente et restaurable indépendamment du conteneur.
+- **Fichiers applicatifs :** sauvegarde quotidienne des fichiers importés et des données persistantes nécessaires. Les fichiers temporaires et caches reconstruisibles sont exclus.
+- **Copie locale :** dépôt chiffré sur un second disque USB, distinct du SSD système et de la base active.
+- **Copie distante :** réplication chiffrée hors site avec Restic vers un stockage indépendant (machine distante, NAS situé ailleurs ou stockage objet compatible S3).
+- **Rétention proposée :** 7 sauvegardes quotidiennes, 4 hebdomadaires et 12 mensuelles pour PostgreSQL ; 30 jours pour les fichiers applicatifs, avec ajustement selon le volume.
+- **Sécurité :** chiffrement Restic avant transfert ; mot de passe et clé de récupération conservés hors du Raspberry Pi, dans un gestionnaire de mots de passe ou un support sécurisé.
+- **Contrôle :** vérification automatique des sauvegardes et alertes en cas d'échec ; test de restauration trimestriel ; sauvegarde manuelle avant migration ou mise à jour majeure.
+
+Le disque local protège contre certaines erreurs logicielles ou suppressions accidentelles, mais pas contre le vol, l'incendie ou la perte du logement. La copie hors site est donc nécessaire. Une sauvegarde n'est considérée fiable qu'après un test de restauration.
+
 ## 13. Observabilité et exploitation
 
 - Logs structurés avec `request_id` et identifiant de tâche.
 - Aucune donnée financière privée, aucun cookie, token ou mot de passe dans les logs.
 - Endpoint de santé `/health/live` et contrôle de disponibilité `/health/ready`.
 - Contrôle de disponibilité PostgreSQL et Redis.
-- Erreurs backend suivies par une solution de monitoring (Sentry possible, à configurer sans données sensibles).
+- Erreurs backend suivies par **Sentry**, configuré avec filtrage des données sensibles, sans cookies, tokens, mots de passe ni données financières privées.
 - Vérification périodique des sauvegardes et tests de restauration.
 
 Les endpoints de santé ne révèlent aucune information d'infrastructure au public.
@@ -357,10 +373,10 @@ Les endpoints de santé ne révèlent aucune information d'infrastructure au pub
 ## 16. Points à confirmer avant implémentation
 
 1. **Hébergement cible :** VPS personnel, NAS ou autre plateforme ; cela conditionne les détails TLS, sauvegardes et supervision.
-2. **Monitoring :** confirmer Sentry ou une solution auto-hébergée.
+2. **Monitoring :** Sentry retenu, avec filtrage strict des données sensibles.
 3. **Stockage des fichiers :** volume Docker privé en V1 ; stockage objet seulement si les volumes le justifient.
-4. **Politique de sauvegarde :** fréquence, rétention et emplacement de la copie externe à définir.
+4. **Sauvegardes :** politique 3-2-1 proposée ci-dessus ; le support distant reste à choisir.
 
 ---
 
-**Fin — ARCHITECTURE.md v0.1**
+**Fin — ARCHITECTURE.md v0.2**
