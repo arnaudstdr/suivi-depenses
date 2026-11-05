@@ -1,6 +1,6 @@
 # Spécifications fonctionnelles — Suivi des dépenses
 
-**Version :** 0.3  
+**Version :** 0.4  
 **Statut :** Base fonctionnelle validée — à implémenter  
 **Application :** Web responsive / PWA  
 **Devise :** EUR
@@ -42,13 +42,15 @@ Le solde de départ est le solde réel du compte courant personnel saisi manuell
 
 Formule :
 
-`Disponible prévisionnel = solde personnel saisi - charges personnelles restantes - participation au foyer restante - dépenses personnelles ponctuelles prévues`
+`Disponible prévisionnel = dernier solde personnel saisi - sorties personnelles postérieures à cette saisie - participation au foyer non encore reflétée dans cette saisie - autres dépenses personnelles prévues non encore reflétées dans cette saisie`
 
 Règles :
-- Ne pas déduire une dépense déjà payée : son effet est déjà reflété dans le solde bancaire saisi.
-- Une charge récurrente est déduite si son échéance est à venir et qu'elle n'est pas marquée payée.
-- Une dépense ponctuelle prévue est déduite tant qu'elle n'est pas marquée payée.
-- Une participation au foyer déjà transférée/payée n'est pas déduite une seconde fois.
+- Le solde manuel constitue un instantané daté du compte bancaire : il reflète les opérations réellement passées avant sa date/heure de saisie.
+- Toute sortie personnelle postérieure à cet instantané reste déduite du disponible, même si elle est déjà payée. Elle ne disparaît du prévisionnel qu'après une nouvelle saisie du solde qui l'intègre.
+- Toute dépense payée avant ou à la date de l'instantané est déjà reflétée dans le solde et ne doit pas être déduite une seconde fois.
+- Une charge récurrente non payée reste déduite si elle est due ou à venir dans la période. Si elle est payée après l'instantané, elle reste déduite jusqu'à la prochaine saisie du solde.
+- Une dépense ponctuelle prévue ou engagée est déduite. Si elle est payée après l'instantané, elle reste déduite jusqu'à la prochaine saisie du solde. Si elle est annulée, elle cesse immédiatement d'être déduite.
+- Une participation au foyer reste déduite après que le virement est marqué comme effectué, tant que ce virement est postérieur au dernier instantané de solde.
 - Les achats de courses communes ne sont jamais déduits du suivi personnel.
 - Aucun revenu attendu, même certain, n'est ajouté.
 - Le calcul porte sur le reste du mois sélectionné, depuis la date de référence du solde jusqu'à la fin du mois.
@@ -95,7 +97,7 @@ L'utilisateur peut enregistrer une dépense ponctuelle :
 - commune hors courses : elle est répartie selon la règle configurée et intégrée à la participation au foyer ;
 - courses communes : elle est imputée au budget courses commun, sans impact sur le disponible personnel.
 
-Une dépense ponctuelle peut être prévue, payée ou annulée. Une dépense payée n'est plus une prévision à déduire.
+Une dépense ponctuelle peut être prévue, engagée, payée ou annulée. Les statuts prévue et engagée sont déduits. Une dépense payée après le dernier instantané de solde reste déduite car son paiement n'est pas encore reflété dans cet instantané. Une dépense payée avant l'instantané est exclue. Une dépense annulée cesse d'être déduite.
 
 ## 6. Budget courses commun
 
@@ -110,7 +112,7 @@ Une dépense ponctuelle peut être prévue, payée ou annulée. Une dépense pay
 - Elle n'est pas ajoutée aux dépenses personnelles et ne diminue pas le disponible personnel.
 - Le tableau de bord affiche l'enveloppe, le montant dépensé et le montant restant.
 
-Le montant de contribution au budget courses est intégré au calcul de la participation au foyer lorsqu'il est configuré comme engagement mensuel à financer. Les achats individuels de courses restent uniquement des consommations de l'enveloppe.
+La contribution mensuelle au budget courses est incluse dans la participation au foyer (269,50 € pour l'utilisateur avec la répartition initiale 55/45). La participation agrège les charges communes classiques et la contribution courses. Le virement de participation est suivi explicitement par période et par membre. Les achats individuels de courses restent uniquement des consommations de l'enveloppe.
 
 ## 7. Enregistrement d'une dépense
 
@@ -194,7 +196,7 @@ La PWA permet l'installation sur mobile et desktop. En V1, les données déjà s
 - Les revenus futurs ne sont pas ajoutés au disponible.
 - Les charges récurrentes personnelles restant à payer sont déduites.
 - Les parts de charges communes restant à financer sont agrégées dans une seule ligne.
-- Une charge commune payée ou déjà transférée n'est pas déduite deux fois.
+- Une sortie payée après le dernier instantané de solde reste déduite jusqu'à la saisie d'un nouveau solde qui l'intègre. Le marquage du virement de participation comme effectué ne modifie pas à lui seul le disponible prévisionnel.
 - Une dépense de courses commune diminue le budget courses, pas le disponible personnel.
 - Le budget courses est initialisé à 490 €/mois et configurable.
 - La répartition par défaut est 55/45 et modifiable.
@@ -203,4 +205,4 @@ La PWA permet l'installation sur mobile et desktop. En V1, les données déjà s
 
 ---
 
-**Fin — SPECIFICATIONS.md v0.3**
+**Fin — SPECIFICATIONS.md v0.4**
