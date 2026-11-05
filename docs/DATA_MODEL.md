@@ -1,6 +1,6 @@
 # Modèle de données — Suivi des dépenses
 
-**Version :** 0.4  
+**Version :** 0.5  
 **Statut :** Modèle conceptuel aligné sur les règles métier validées  
 **Backend cible :** Python 3.12 / FastAPI / SQLAlchemy 2  
 **Base :** PostgreSQL
@@ -129,10 +129,13 @@ Pour une charge shared, la règle de répartition est résolue à partir de la r
 | expected_amount_cents | BIGINT nullable | montant attendu |
 | confirmed_amount_cents | BIGINT nullable | montant confirmé |
 | status | VARCHAR(30) | pending / confirmed / paid / skipped |
+| paid_at | TIMESTAMPTZ nullable | date/heure réelle du paiement pointé |
+| payment_amount_cents | BIGINT nullable | montant réellement payé, notamment pour montant variable |
+| payment_note | TEXT nullable | note ou motif de correction |
 | transaction_id | UUID nullable | FK transactions, UNIQUE |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Contrainte UNIQUE (recurring_expense_id, due_date). La génération des occurrences est idempotente.
+Contrainte UNIQUE (recurring_expense_id, due_date). La génération des occurrences est idempotente. Le pointage `paid` renseigne `paid_at`, confirme `payment_amount_cents`, crée ou associe une transaction réelle et renseigne son `paid_at`. Le pointage est idempotent : une seconde demande ne crée pas une deuxième transaction. Toute correction d'un paiement déjà pointé est une opération explicite et auditée.
 
 ## 9. planned_expenses
 
@@ -244,6 +247,9 @@ Les opérations financières sensibles sont auditées : création/modification/s
 
 - Solde manuel et horodatage.
 - Charges personnelles fixes et variables.
+- Pointage manuel d'une échéance récurrente avec date et montant réellement payés.
+- Pointage idempotent sans création de doublon de transaction.
+- Échéance pointée payée après l'instantané de solde toujours déduite jusqu'à une nouvelle saisie du solde.
 - Calcul de la quote-part 55/45 et règles spécifiques.
 - Agrégation de toutes les charges communes dans une seule ligne.
 - Exclusion des sorties payées avant ou à l'instantané de solde.
