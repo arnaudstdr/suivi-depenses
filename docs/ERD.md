@@ -105,6 +105,8 @@ erDiagram
       numeric allocation_percentage
       varchar status
       timestamptz transferred_at
+      bigint transferred_amount_cents
+      uuid transaction_id FK
     }
     PERSONAL_BALANCE_ENTRIES {
       uuid id PK
@@ -145,6 +147,7 @@ erDiagram
       uuid household_id FK
       uuid owner_user_id FK
       uuid category_id FK
+      uuid allocation_rule_id FK
       varchar label
       bigint amount_cents
       varchar scope
@@ -215,8 +218,8 @@ erDiagram
 1. Le foyer possède deux membres distincts.
 2. Le solde suivi est personnel, manuel et historisé ; aucun compte joint n'est modélisé.
 3. Une charge récurrente est personnelle ou commune.
-4. Une charge commune est répartie par règle par défaut 55/45, ou par règle spécifique totalisant 100 %.
-5. La participation au foyer inclut les charges communes et la contribution au budget courses ; son virement est suivi par mois et par membre.
+4. Une charge commune est répartie par règle par défaut 100 % pour un membre seul, puis 55/45 à deux membres, ou par règle spécifique totalisant 100 %.
+5. La participation au foyer inclut les charges communes et la contribution au budget courses ; son virement est suivi par mois et par membre. La transaction du virement est exclue des déductions de transactions personnelles pour éviter un double comptage.
 6. Le solde manuel est un instantané daté : toute sortie postérieure reste déduite, même si elle est marquée payée, jusqu'à une nouvelle saisie du solde.
 7. Les achats de courses communes sont imputés au budget courses du foyer (490 € par défaut), jamais au disponible personnel.
 8. Une occurrence récurrente payée référence une transaction ; une échéance ne peut être générée deux fois. La transaction et l'occurrence se référencent mutuellement et de façon unique.

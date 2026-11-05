@@ -18,7 +18,8 @@ def clean_database(migrated_database_url: str) -> Iterator[None]:
     with engine.begin() as connection:
         connection.execute(
             text(
-                "TRUNCATE TABLE planned_expenses, recurring_occurrences, "
+                "TRUNCATE TABLE household_contributions, allocation_rule_members, "
+                "allocation_rules, planned_expenses, recurring_occurrences, "
                 "recurring_expenses, budget_periods, budgets, transactions, "
                 "personal_balance_entries, audit_logs, invitations, sessions, "
                 "household_members, households, users CASCADE"

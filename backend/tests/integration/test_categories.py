@@ -21,7 +21,7 @@ def test_default_categories_are_available_after_bootstrap(
 
     categories = list_categories(client)
 
-    assert len(categories) == 8
+    assert len(categories) == 9
     assert len([category for category in categories if category["is_grocery"]]) == 1
     assert all(category["household_id"] is None for category in categories)
     assert grocery_category_id(client)

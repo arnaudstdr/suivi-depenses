@@ -11,7 +11,7 @@
 - Dates métier ISO `YYYY-MM-DD`.
 - Horodatages ISO 8601 avec fuseau.
 - Montants en centimes entiers.
-- Pourcentages en points de pourcentage (55.0000 = 55 %).
+- Pourcentages en points de pourcentage, avec 3 décimales maximum (55.000 = 55 %), sérialisés en chaîne décimale pour préserver la précision.
 - Les permissions sont vérifiées côté serveur.
 - Les listes paginées acceptent `limit` (défaut 50, max 200) et `offset`, et renvoient `{items, total, limit, offset}`.
 - Les erreurs suivent un format commun.
@@ -115,10 +115,16 @@ Les déductions couvrent les engagements non payés et les sorties payées aprè
 
 | Méthode | Route | Description |
 |---|---|---|
-| GET | `/households/{household_id}/contributions?period=YYYY-MM` | Lire la participation du membre pour la période |
-| POST | `/households/{household_id}/contributions/{contribution_id}/mark-transferred` | Pointer le virement avec sa date et son montant réels |
+| GET | `/households/me/allocation-rules` | Lire les règles de répartition |
+| PUT | `/households/me/allocation-rules/default` | Définir la répartition par défaut (propriétaire) |
+| PUT | `/recurring-expenses/{id}/allocation-rule` | Définir une règle spécifique à une charge commune |
+| DELETE | `/recurring-expenses/{id}/allocation-rule` | Revenir à la règle par défaut |
+| GET | `/households/me/contributions?period=YYYY-MM` | Lire les contributions de la période |
+| POST | `/households/me/contributions/{contribution_id}/mark-transferred` | Pointer son propre virement avec sa date et son montant réels |
 
-La contribution mensuelle agrège la part du membre dans les charges communes et sa contribution au budget courses. Elle se pointe comme une échéance récurrente : le corps de la requête accepte `transferred_at`, `transferred_amount_cents` et une note facultative. Le serveur passe de `pending` à `transferred`, associe une transaction réelle unique et journalise l'opération. Le pointage est idempotent ; une correction ultérieure est explicite et auditée. Cette action ne modifie pas à elle seule le disponible : si le virement est postérieur au dernier instantané de solde, son montant reste déduit. Une nouvelle saisie du solde après le virement l'intègre et supprime alors la déduction, sans double comptage.
+La règle par défaut contient 100 % pour le propriétaire tant qu'il est seul, puis passe à 55/45 à l'arrivée du second membre. Les pourcentages sont exprimés en points, totalisent exactement 100 et sont répartis au centime avec la méthode du plus fort reste. Une règle spécifique ne s'applique qu'à une charge récurrente commune.
+
+La contribution mensuelle agrège la part du membre dans les charges communes et sa contribution au budget courses. Elle se pointe comme une échéance récurrente : le corps de la requête accepte `transferred_at`, `transferred_amount_cents` et une note facultative. Le serveur passe de `pending` à `transferred`, associe une transaction personnelle unique de catégorie « Participation au foyer » et journalise l'opération. Cette transaction est exclue des déductions de transactions personnelles pour éviter un double comptage. Le pointage est idempotent ; une correction ultérieure est explicite et auditée. Cette action ne modifie pas à elle seule le disponible : si le virement est postérieur au dernier instantané de solde, son montant reste déduit. Une nouvelle saisie du solde après le virement l'intègre et supprime alors la déduction, sans double comptage. Chaque membre ne peut pointer que sa propre contribution.
 
 ## 6. Transactions
 
@@ -166,7 +172,7 @@ Règles :
 | GET | `/recurring-expenses/{id}/occurrences?period=YYYY-MM&status=...` | Échéances générées pour la période |
 | POST | `/recurring-occurrences/{occurrence_id}/mark-paid` | Pointer une échéance comme payée |
 
-Champs de création : `label`, `amount_cents`, `category_id`, `scope` (personal/shared), `frequency` (`weekly`, `monthly`, `quarterly`, `semiannual`, `yearly`), `start_date`, `end_date`, `due_day`, `amount_is_variable`. Une charge fixe exige `amount_cents`. La liaison à une règle de répartition spécifique sera ajoutée en 4.3.
+Champs de création : `label`, `amount_cents`, `category_id`, `scope` (personal/shared), `frequency` (`weekly`, `monthly`, `quarterly`, `semiannual`, `yearly`), `start_date`, `end_date`, `due_day`, `amount_is_variable`. Une charge fixe exige `amount_cents`. Une règle de répartition spécifique peut être définie via `PUT /recurring-expenses/{id}/allocation-rule`.
 
 Les occurrences sont générées à la demande pour la période demandée, de manière idempotente. Le jour d'échéance est ramené au dernier jour du mois si nécessaire. Une charge désactivée ne génère plus de nouvelles occurrences.
 

@@ -16,6 +16,7 @@ from app.core.security import (
     normalize_email,
     validate_password_strength,
 )
+from app.domains.allocations.service import ensure_default_allocation_rule
 from app.domains.audit.repository import AuditRepository
 from app.domains.auth.models import Invitation
 from app.domains.auth.repository import InvitationRepository
@@ -197,6 +198,7 @@ class HouseholdService:
         self._db.flush()
 
         ensure_grocery_budget(self._db, household.id)
+        ensure_default_allocation_rule(self._db, household.id)
 
         self._audit.add(
             occurred_at=self._now(),

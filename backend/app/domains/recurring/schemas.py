@@ -58,6 +58,7 @@ class RecurringExpensePublic(BaseModel):
     household_id: UUID | None
     owner_user_id: UUID
     category_id: UUID
+    allocation_rule_id: UUID | None
     label: str
     amount_cents: int | None
     scope: str

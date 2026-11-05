@@ -64,6 +64,10 @@ class RecurringExpense(Base, TimestampMixin):
         ForeignKey("categories.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    allocation_rule_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("allocation_rules.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     label: Mapped[str] = mapped_column(String(255), nullable=False)
     amount_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     scope: Mapped[str] = mapped_column(String(20), nullable=False)

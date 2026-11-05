@@ -11,6 +11,7 @@ class DefaultCategory:
 
 
 GROCERY_CATEGORY_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+PARTICIPATION_CATEGORY_ID = uuid.UUID("00000000-0000-4000-8000-000000000009")
 
 DEFAULT_CATEGORIES: tuple[DefaultCategory, ...] = (
     DefaultCategory(
@@ -53,5 +54,10 @@ DEFAULT_CATEGORIES: tuple[DefaultCategory, ...] = (
         id=uuid.UUID("00000000-0000-4000-8000-000000000008"),
         name="Divers",
         icon="more-horizontal",
+    ),
+    DefaultCategory(
+        id=PARTICIPATION_CATEGORY_ID,
+        name="Participation au foyer",
+        icon="users",
     ),
 )

@@ -38,7 +38,7 @@ La conception fonctionnelle et la maquette UX sont validées. Le socle backend e
 
 Le socle sécurisé est également en place : bootstrap du foyer par CLI, sessions opaques, cookies sécurisés, protection CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et journal d'audit.
 
-Les tranches 4.1 et 4.2 du suivi financier sont implémentées : solde personnel historisé, catégories, transactions personnelles/communes/courses, remboursements liés, budget courses mensuel de 490 € sans report, dépenses ponctuelles prévues/engagées, charges récurrentes, génération idempotente des occurrences et pointage avec transaction liée.
+Les tranches 4.1 à 4.3 du suivi financier sont implémentées : solde personnel historisé, catégories, transactions personnelles/communes/courses, remboursements liés, budget courses mensuel de 490 € sans report, dépenses ponctuelles prévues/engagées, charges récurrentes, génération idempotente des occurrences, pointage avec transaction liée, répartition 55/45, participation au foyer et contribution au budget courses.
 
 ## Documentation
 
@@ -52,4 +52,4 @@ Les tranches 4.1 et 4.2 du suivi financier sont implémentées : solde personnel
 
 ## Prochaine étape
 
-Poursuivre la Phase 4 avec la tranche 4.3 : répartition 55/45, participation au foyer, contribution au budget courses et pointage du virement. Puis viendra le moteur de disponible prévisionnel avec dashboard (4.4). Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md).
+Terminer la Phase 4 avec la tranche 4.4 : moteur de disponible prévisionnel, gestion des instantanés de solde et tableau de bord personnel. Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md).

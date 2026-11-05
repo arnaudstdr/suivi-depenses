@@ -81,3 +81,29 @@ def accept_invitation(
         json={"email": email, "first_name": first_name, "password": password},
         headers={"X-CSRF-Token": csrf_token},
     )
+
+
+def setup_two_member_household(
+    client: TestClient,
+    db: Session,
+    settings: Settings,
+) -> tuple[str, str]:
+    """Crée le foyer, invite le second membre et laisse le client connecté owner."""
+    bootstrap_owner(db, settings)
+    assert login(client).status_code == 200
+    owner_id = str(client.get("/api/v1/auth/me").json()["user"]["id"])
+    invitation = create_invitation(client, email=INVITEE_EMAIL)
+    assert invitation.status_code == 201
+    client.cookies.clear()
+    accepted = accept_invitation(
+        client,
+        token=invitation.json()["token"],
+        email=INVITEE_EMAIL,
+        first_name=INVITEE_FIRST_NAME,
+        password=INVITEE_PASSWORD,
+    )
+    assert accepted.status_code == 201
+    member_id = str(accepted.json()["user"]["id"])
+    client.cookies.clear()
+    assert login(client).status_code == 200
+    return owner_id, member_id

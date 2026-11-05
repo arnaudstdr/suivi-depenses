@@ -18,6 +18,7 @@ from app.core.security import (
     verify_dummy_password,
     verify_password,
 )
+from app.domains.allocations.service import ensure_default_allocation_rule
 from app.domains.audit.repository import AuditRepository
 from app.domains.auth.models import AuthSession
 from app.domains.auth.repository import AuthSessionRepository, InvitationRepository
@@ -169,6 +170,7 @@ class AuthService:
             )
             self._households.add_member(membership)
             self._db.flush()
+            ensure_default_allocation_rule(self._db, household.id)
 
             invitation.used_at = now
             invitation.accepted_by_user_id = user.id

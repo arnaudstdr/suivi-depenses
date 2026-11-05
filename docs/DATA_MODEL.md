@@ -149,7 +149,7 @@ Le solde courant de référence est la dernière saisie du propriétaire. Chaque
 | icon | VARCHAR(50) | nullable |
 | is_active | BOOLEAN | NOT NULL |
 
-Les catégories marquées is_grocery identifient les dépenses pouvant consommer l'enveloppe courses. Les catégories globales par défaut sont seedées par la migration `0003_financial_core` : Courses / alimentation, Logement, Énergie, Transport, Santé, Abonnements, Loisirs et Divers. Un nom ne peut pas être dupliqué, globalement ou dans un foyer. Les catégories globales sont en lecture seule.
+Les catégories marquées is_grocery identifient les dépenses pouvant consommer l'enveloppe courses. Les catégories globales par défaut sont seedées par les migrations `0003_financial_core` et `0005_allocations` : Courses / alimentation, Logement, Énergie, Transport, Santé, Abonnements, Loisirs, Divers et Participation au foyer. Un nom ne peut pas être dupliqué, globalement ou dans un foyer. Les catégories globales sont en lecture seule.
 
 ## 6. transactions
 
@@ -181,6 +181,7 @@ Règles :
 - Une transaction commune hors courses est répartie selon la règle configurée ; sa quote-part personnelle alimente la ligne agrégée Participation au foyer.
 - Une dépense est enregistrée une seule fois.
 - Un remboursement est une transaction distincte liée à l'originale.
+- Une transaction de virement de participation est liée à `household_contributions.transaction_id` et ne doit pas être déduite une seconde fois en plus de la participation.
 - `recurring_occurrence_id` est ajouté par la migration `0004_forecast` et référence l'échéance à l'origine de la transaction.
 - Les transactions sont créées avec `status='paid'` et un `paid_at` renseigné. Si `paid_at` est omis, le serveur utilise midi dans le fuseau du foyer.
 - La suppression est logique via `deleted_at`; une dépense ayant des remboursements ne peut pas être supprimée.
@@ -278,13 +279,13 @@ Contrainte UNIQUE (budget_id, period_start). Aucun report du reliquat. Le consom
 
 ## 11. allocation_rules et allocation_rule_members
 
-Une règle peut être la répartition par défaut du foyer ou une règle spécifique à une charge. Chaque règle contient les pourcentages par membre.
+Une règle peut être la répartition par défaut du foyer ou une règle spécifique à une charge. Chaque règle contient les pourcentages par membre, en `NUMERIC(6,3)`, totalisant exactement 100 %. La règle spécifique prévaut sur la règle par défaut.
 
-Valeurs initiales : utilisateur courant 55 %, autre membre 45 %. Les pourcentages doivent totaliser exactement 100 %. La règle spécifique prévaut sur la règle par défaut.
+À la création du foyer, la règle par défaut contient le seul propriétaire à 100 %. Quand le second membre rejoint le foyer, elle passe automatiquement à 55 % pour le premier membre et 45 % pour le second, tant qu'elle n'a pas déjà été personnalisée. Les foyers existants sont backfillés par la migration `0005_allocations`. La colonne `recurring_expenses.allocation_rule_id` permet de lier une règle spécifique à une charge commune.
 
-Une charge commune est imputée à chaque membre selon son pourcentage. Pour le tableau de bord personnel, seule la quote-part du membre connecté est agrégée dans Participation au foyer.
+Une charge commune est imputée à chaque membre selon son pourcentage. La répartition se fait au centime avec la méthode du plus fort reste, de façon déterministe, et la somme des parts est exactement égale au montant. Pour le tableau de bord personnel, seule la quote-part du membre connecté est agrégée dans Participation au foyer.
 
-La contribution mensuelle au budget courses (55 % de 490 €, soit 269,50 € pour l'utilisateur et 220,50 € pour l'autre membre) peut être représentée comme un engagement récurrent commun distinct, intégré à la ligne Participation au foyer. Les achats de courses ne sont ensuite imputés qu'au budget courses : ils ne diminuent jamais le disponible personnel une seconde fois.
+La contribution mensuelle au budget courses (55 % de 490 €, soit 269,50 € pour l'utilisateur et 220,50 € pour l'autre membre) est intégrée à la ligne Participation au foyer. Les achats de courses ne sont ensuite imputés qu'au budget courses : ils ne diminuent jamais le disponible personnel une seconde fois.
 
 ## 12. household_contributions
 
@@ -305,6 +306,8 @@ Suit le virement mensuel de participation au foyer de chaque membre. La contribu
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
 Contrainte UNIQUE (household_id, user_id, period_start). Le statut `transferred` signifie que l'utilisateur a pointé le virement comme une échéance récurrente, en confirmant `transferred_at` et `transferred_amount_cents` ; la transaction réelle associée est unique et le pointage est idempotent. Il ne signifie pas que la sortie est déjà incluse dans le dernier solde personnel saisi. Une contribution transférée après `personal_balance_entries.recorded_at` reste déduite du disponible jusqu'à la prochaine saisie de solde. Une contribution transférée avant ou à cette date est déjà reflétée dans le solde et est exclue.
+
+La transaction du virement est une transaction personnelle de catégorie « Participation au foyer ». Elle est liée à la contribution et doit être exclue des déductions de transactions personnelles lors du calcul du disponible, afin de ne pas compter deux fois la participation. `allocation_percentage` conserve le pourcentage par défaut du membre comme référence historique ; le montant peut refléter des règles spécifiques par charge.
 
 ## 13. Calcul du disponible prévisionnel
 

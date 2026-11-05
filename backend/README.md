@@ -175,6 +175,37 @@ Règles principales :
 - Une charge récurrente désactivée ne génère plus de nouvelles occurrences.
 - Les règles de répartition par charge restent en tranche 4.3.
 
+## Suivi financier — tranche 4.3
+
+La migration `0005_allocations` ajoute :
+
+- les règles de répartition et leurs membres ;
+- les contributions mensuelles au foyer ;
+- le lien `recurring_expenses.allocation_rule_id` ;
+- la catégorie système « Participation au foyer ».
+
+Endpoints ajoutés :
+
+- `GET /api/v1/households/me/allocation-rules`
+- `PUT /api/v1/households/me/allocation-rules/default`
+- `PUT/DELETE /api/v1/recurring-expenses/{id}/allocation-rule`
+- `GET /api/v1/households/me/contributions?period=YYYY-MM`
+- `POST /api/v1/households/me/contributions/{id}/mark-transferred`
+
+Règles principales :
+
+- La règle par défaut vaut 100 % pour un membre seul, puis 55/45 à l'arrivée
+  du second membre.
+- Les pourcentages totalisent exactement 100 %. La répartition au centime
+  utilise la méthode du plus fort reste.
+- La contribution agrège la quote-part des charges communes non courses, les
+  dépenses prévues communes et la contribution au budget courses.
+- Une règle spécifique peut être liée à une charge récurrente commune.
+- Le virement est pointé par le membre lui-même, de façon idempotente. Il crée
+  une transaction personnelle « Participation au foyer » liée.
+- Une contribution transférée est figée ; les nouvelles charges ne la modifient
+  plus.
+
 ## Contrôles
 
 ```bash
