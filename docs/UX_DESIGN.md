@@ -1,6 +1,6 @@
 # Design UX — Suivi des dépenses
 
-**Version :** 0.5  
+**Version :** 0.6  
 **Statut :** Direction UX validée, maquette à aligner  
 **Référence métier :** SPECIFICATIONS.md v0.4
 
@@ -91,7 +91,7 @@ Le formulaire ne doit pas demander des informations techniques inutiles à chaqu
 
 ## 6. Gestion des charges récurrentes
 
-Écran de liste avec libellé, montant, fréquence, catégorie, type Personnel/Commun, pourcentage si commune, prochaine échéance et statut.
+Écran de liste avec libellé, montant, fréquence, catégorie, type Personnel/Commun, pourcentage si commune, prochaine échéance et statut. Chaque occurrence est présentée individuellement avec sa date d'échéance, son montant attendu/confirmé, son statut et une action « Pointer comme payée » tant qu'elle n'est pas payée ou ignorée.
 
 Création/modification :
 - type Personnel ou Commun ;
@@ -100,6 +100,8 @@ Création/modification :
 - date/jour d'échéance ;
 - répartition (uniquement si commune) ;
 - montant variable ou fixe.
+
+Pointage d'une échéance : ouvrir une confirmation légère avec date réelle du paiement et montant réellement débité (montant attendu prérempli pour une charge fixe ; saisie obligatoire pour une charge variable). Après validation, afficher le statut « Payée » et le montant réel. Le pointage ne change pas le disponible si le paiement est postérieur au dernier instantané de solde ; la sortie reste provisionnée jusqu'à une nouvelle saisie du solde.
 
 ## 7. Vue Foyer
 
