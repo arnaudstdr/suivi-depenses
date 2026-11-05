@@ -104,6 +104,42 @@ L'acceptation crée l'utilisateur, l'appartenance au foyer et une session dans
 une transaction unique. L'invitation expire après 7 jours et ne peut être
 utilisée qu'une fois. Le foyer est limité à deux membres actifs en V1.
 
+## Suivi financier — tranche 4.1
+
+La migration `0003_financial_core` ajoute :
+
+- le solde personnel historisé ;
+- les catégories globales et du foyer ;
+- les transactions personnelles, communes et courses ;
+- le budget courses et ses périodes mensuelles.
+
+Le bootstrap crée les huit catégories globales et le budget courses initial de
+49 000 centimes pour le foyer. Les foyers existants sont backfillés par la
+migration.
+
+Endpoints ajoutés :
+
+- `GET/PUT /api/v1/users/me/personal-balance`
+- `GET /api/v1/users/me/personal-balance/history`
+- `GET/POST /api/v1/categories`
+- `PATCH /api/v1/categories/{id}`
+- `GET/POST /api/v1/transactions`
+- `GET/PATCH/DELETE /api/v1/transactions/{id}`
+- `GET/PATCH /api/v1/households/me/grocery-budget`
+- `GET /api/v1/households/me/grocery-budget/transactions`
+
+Règles principales :
+
+- Une transaction personnelle n'a ni foyer ni budget.
+- Une transaction commune de courses consomme automatiquement le budget courses.
+- Une transaction commune hors courses n'a pas de budget ; sa quote-part sera
+  intégrée à la participation en tranche 4.3.
+- Une transaction personnelle n'est visible que par son propriétaire.
+- Les remboursements sont des transactions distinctes liées à l'originale.
+- La suppression est logique. Une dépense avec remboursements ne peut pas être
+  supprimée.
+- Les montants sont des centimes entiers stricts.
+
 ## Contrôles
 
 ```bash

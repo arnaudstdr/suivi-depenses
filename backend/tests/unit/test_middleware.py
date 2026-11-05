@@ -1,4 +1,8 @@
+import pytest
+
 from app.api.middleware import _safe_log_path
+
+pytestmark = pytest.mark.unit
 
 
 def test_invitation_token_is_removed_from_logged_path() -> None:

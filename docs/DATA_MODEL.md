@@ -149,7 +149,7 @@ Le solde courant de référence est la dernière saisie du propriétaire. Chaque
 | icon | VARCHAR(50) | nullable |
 | is_active | BOOLEAN | NOT NULL |
 
-Les catégories marquées is_grocery identifient les dépenses pouvant consommer l'enveloppe courses.
+Les catégories marquées is_grocery identifient les dépenses pouvant consommer l'enveloppe courses. Les catégories globales par défaut sont seedées par la migration `0003_financial_core` : Courses / alimentation, Logement, Énergie, Transport, Santé, Abonnements, Loisirs et Divers. Un nom ne peut pas être dupliqué, globalement ou dans un foyer. Les catégories globales sont en lecture seule.
 
 ## 6. transactions
 
@@ -181,6 +181,10 @@ Règles :
 - Une transaction commune hors courses est répartie selon la règle configurée ; sa quote-part personnelle alimente la ligne agrégée Participation au foyer.
 - Une dépense est enregistrée une seule fois.
 - Un remboursement est une transaction distincte liée à l'originale.
+- `recurring_occurrence_id` sera ajouté avec la tranche des récurrences ; il n'est pas encore présent dans la migration `0003`.
+- Les transactions sont créées avec `status='paid'` et un `paid_at` renseigné. Si `paid_at` est omis, le serveur utilise midi dans le fuseau du foyer.
+- La suppression est logique via `deleted_at`; une dépense ayant des remboursements ne peut pas être supprimée.
+- Un remboursement ne peut pas dépasser le montant encore remboursable de la dépense d'origine.
 
 ## 7. recurring_expenses
 
@@ -256,7 +260,7 @@ Les dépenses ponctuelles communes hors courses sont réparties et intégrées �
 | is_active | BOOLEAN | NOT NULL |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Le budget courses initial est de 49 000 centimes (490 €), mensuel et commun.
+Le budget courses initial est de 49 000 centimes (490 €), mensuel et commun. Il est créé au bootstrap du foyer et pour les foyers existants par la migration `0003_financial_core`. Un seul budget `grocery` est autorisé par foyer. La période mensuelle est créée à la demande, avec le montant par défaut, sans report du reliquat.
 
 ### budget_periods
 

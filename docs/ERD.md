@@ -22,6 +22,7 @@ erDiagram
     HOUSEHOLDS ||--o{ HOUSEHOLD_CONTRIBUTIONS : receives
     USERS ||--o{ TRANSACTIONS : creates
     HOUSEHOLDS ||--o{ TRANSACTIONS : owns_shared
+    HOUSEHOLDS o|--o{ CATEGORIES : owns
     CATEGORIES ||--o{ TRANSACTIONS : classifies
     CATEGORIES ||--o{ RECURRING_EXPENSES : classifies
     USERS ||--o{ RECURRING_EXPENSES : owns
@@ -110,12 +111,17 @@ erDiagram
       uuid user_id FK
       bigint balance_cents
       timestamptz recorded_at
+      text note
+      timestamptz created_at
     }
     CATEGORIES {
       uuid id PK
       uuid household_id FK
       varchar name
+      varchar category_type
       boolean is_grocery
+      varchar icon
+      boolean is_active
     }
     TRANSACTIONS {
       uuid id PK
@@ -123,11 +129,15 @@ erDiagram
       uuid user_id FK
       uuid category_id FK
       uuid budget_id FK
+      varchar label
       bigint amount_cents
       varchar scope
       varchar transaction_type
       date transaction_date
       timestamptz paid_at
+      varchar status
+      uuid original_transaction_id FK
+      timestamptz deleted_at
     }
     RECURRING_EXPENSES {
       uuid id PK
@@ -159,7 +169,10 @@ erDiagram
       uuid id PK
       uuid household_id FK
       varchar name
+      varchar budget_type
+      uuid category_id FK
       bigint default_amount_cents
+      boolean is_active
     }
     BUDGET_PERIODS {
       uuid id PK
@@ -167,6 +180,7 @@ erDiagram
       bigint allocated_amount_cents
       date period_start
       date period_end
+      varchar status
     }
     ALLOCATION_RULES {
       uuid id PK

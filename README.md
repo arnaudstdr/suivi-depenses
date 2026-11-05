@@ -36,7 +36,9 @@ Les achats enregistrés comme courses communes diminuent uniquement l'enveloppe 
 
 La conception fonctionnelle et la maquette UX sont validées. Le socle backend est en place : FastAPI, SQLAlchemy 2, Alembic, PostgreSQL, endpoints de santé, tests et CI. Le frontend actuel reste une maquette avec données fictives et ne consomme pas encore l'API.
 
-Le socle sécurisé est également en place : bootstrap du foyer par CLI, sessions opaques, cookies sécurisés, protection CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et journal d'audit. Les tables `users`, `households`, `household_members`, `sessions`, `invitations` et `audit_logs` sont créées.
+Le socle sécurisé est également en place : bootstrap du foyer par CLI, sessions opaques, cookies sécurisés, protection CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et journal d'audit.
+
+La tranche 4.1 du suivi financier est implémentée : solde personnel historisé, catégories, transactions personnelles/communes/courses, remboursements liés et budget courses mensuel de 490 € sans report. Les tables `personal_balance_entries`, `categories`, `transactions`, `budgets` et `budget_periods` sont créées.
 
 ## Documentation
 
@@ -50,4 +52,4 @@ Le socle sécurisé est également en place : bootstrap du foyer par CLI, sessio
 
 ## Prochaine étape
 
-Démarrer la Phase 4 — suivi financier : solde personnel manuel et historisé, transactions, catégories, charges récurrentes, dépenses prévues, budget courses et calcul du disponible prévisionnel. Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md).
+Poursuivre la Phase 4 avec la tranche 4.2 : dépenses ponctuelles prévues, charges récurrentes, occurrences et pointage idempotent. Puis viendront la participation/répartition (4.3) et le moteur de disponible prévisionnel avec dashboard (4.4). Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md).

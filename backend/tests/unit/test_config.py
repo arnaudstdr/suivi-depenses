@@ -3,6 +3,8 @@ from pydantic import ValidationError
 
 from app.core.config import AppEnv, Settings
 
+pytestmark = pytest.mark.unit
+
 
 def test_database_url_is_built_from_postgres_settings() -> None:
     settings = Settings(

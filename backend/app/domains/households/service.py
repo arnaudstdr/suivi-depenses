@@ -19,6 +19,8 @@ from app.core.security import (
 from app.domains.audit.repository import AuditRepository
 from app.domains.auth.models import Invitation
 from app.domains.auth.repository import InvitationRepository
+from app.domains.budgets.service import ensure_grocery_budget
+from app.domains.categories.seed import ensure_default_categories
 from app.domains.households.models import Household, HouseholdMember
 from app.domains.households.repository import HouseholdRepository
 from app.domains.users.models import User
@@ -143,6 +145,7 @@ class HouseholdService:
         password: str,
     ) -> tuple[User, Household, HouseholdMember]:
         validate_password_strength(password)
+        ensure_default_categories(self._db)
         if self._households.get_first() is not None:
             raise AppError(
                 code="household_exists",
@@ -192,6 +195,8 @@ class HouseholdService:
         )
         self._households.add_member(membership)
         self._db.flush()
+
+        ensure_grocery_budget(self._db, household.id)
 
         self._audit.add(
             occurred_at=self._now(),

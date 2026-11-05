@@ -11,6 +11,8 @@ from app.core.security import (
     verify_password,
 )
 
+pytestmark = pytest.mark.unit
+
 
 def test_password_hash_uses_argon2id_and_verifies() -> None:
     password_hash = hash_password("correct-horse-battery-staple")

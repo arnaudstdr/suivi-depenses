@@ -13,7 +13,8 @@
 - Montants en centimes entiers.
 - Pourcentages en points de pourcentage (55.0000 = 55 %).
 - Les permissions sont vérifiées côté serveur.
-- Les listes sont paginées ; les erreurs suivent un format commun.
+- Les listes paginées acceptent `limit` (défaut 50, max 200) et `offset`, et renvoient `{items, total, limit, offset}`.
+- Les erreurs suivent un format commun.
 
 ## 2. Authentification
 
@@ -64,6 +65,18 @@ Exemple PUT :
 ```
 
 Le backend conserve l'horodatage et l'historique. Aucun accès bancaire externe n'est appelé. Un solde négatif est accepté. `recorded_at` est l'instantané de référence pour déterminer quelles sorties sont déjà reflétées.
+
+Si `recorded_at` est omis, le serveur utilise l'instant courant.
+
+### 3.1 Catégories
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/categories` | Lister les catégories globales et du foyer |
+| POST | `/categories` | Créer une catégorie du foyer |
+| PATCH | `/categories/{id}` | Modifier le nom, l'icône ou le statut actif |
+
+Les catégories globales sont en lecture seule. Les catégories du foyer ne peuvent pas dupliquer un nom global ou du foyer. Le caractère `is_grocery` est défini à la création et n'est pas modifiable.
 
 ## 4. Tableau de bord personnel
 
@@ -117,7 +130,9 @@ La contribution mensuelle agrège la part du membre dans les charges communes et
 | PATCH | `/transactions/{id}` | Modifier |
 | DELETE | `/transactions/{id}` | Supprimer logiquement |
 
-Filtres : `scope`, `category_id`, `date_from`, `date_to`, `status`, `search`.
+Filtres : `scope`, `category_id`, `date_from`, `date_to`, `status`, `search`. Pagination : `limit` et `offset`.
+
+Si `paid_at` est omis à la création, le serveur utilise midi dans le fuseau du foyer pour la date de la transaction.
 
 Exemple création dépense :
 
@@ -173,9 +188,11 @@ Une dépense personnelle prévue ou engagée est déduite. Si elle est payée ap
 
 | Méthode | Route | Description |
 |---|---|---|
-| GET | `/households/{household_id}/grocery-budget?period=YYYY-MM` | Lire l'enveloppe et le consommé |
-| PATCH | `/households/{household_id}/grocery-budget` | Modifier le montant de référence |
-| GET | `/households/{household_id}/grocery-budget/transactions` | Historique des achats |
+| GET | `/households/me/grocery-budget?period=YYYY-MM` | Lire l'enveloppe et le consommé |
+| PATCH | `/households/me/grocery-budget` | Modifier le montant de référence (propriétaire) |
+| GET | `/households/me/grocery-budget/transactions?period=YYYY-MM` | Historique des achats |
+
+Le budget courses est créé à 49 000 centimes au bootstrap du foyer. Sa période mensuelle est créée à la demande ; aucun reliquat n'est reporté. Une modification du montant de référence s'applique à la période courante ouverte et aux périodes futures.
 
 Valeur initiale : 49 000 centimes par mois. Répartition de contribution de référence : 55 % / 45 %, soit 269,50 € / 220,50 €. Le budget est remis à zéro chaque mois, sans report.
 

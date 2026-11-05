@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
+from app.domains.categories.seed import ensure_default_categories
 from app.main import create_app
 
 
@@ -17,10 +18,14 @@ def clean_database(migrated_database_url: str) -> Iterator[None]:
     with engine.begin() as connection:
         connection.execute(
             text(
-                "TRUNCATE TABLE audit_logs, invitations, sessions, "
+                "TRUNCATE TABLE budget_periods, budgets, transactions, "
+                "personal_balance_entries, audit_logs, invitations, sessions, "
                 "household_members, households, users CASCADE"
             )
         )
+    with Session(engine) as session:
+        ensure_default_categories(session)
+        session.commit()
     engine.dispose()
 
 
