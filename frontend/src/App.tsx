@@ -149,6 +149,11 @@ function Dashboard({
     dueDay: String(new Date().getDate()),
     amountIsVariable: false,
   });
+  const [allocationForm, setAllocationForm] = useState<Record<string, string>>(
+    {},
+  );
+  const [allocationError, setAllocationError] = useState<string | null>(null);
+  const [savingAllocation, setSavingAllocation] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutating, setMutating] = useState(false);
 
@@ -169,6 +174,16 @@ function Dashboard({
     () => data.allocationRules.find((rule) => rule.is_default),
     [data.allocationRules],
   );
+  const allocationTotal = defaultRule
+    ? defaultRule.members.reduce(
+        (total, member) =>
+          total +
+          (Number(
+            (allocationForm[member.user_id] ?? "0").replace(",", "."),
+          ) || 0),
+        0,
+      )
+    : 0;
   const isPersonal = context === "Personnel";
   const balanceCents = dashboard?.personal_balance.balance_cents ?? 0;
   const householdCents =
@@ -210,6 +225,21 @@ function Dashboard({
       }));
     }
   }, [data.categories, form.categoryId]);
+
+  useEffect(() => {
+    if (defaultRule === undefined) {
+      setAllocationForm({});
+      return;
+    }
+    setAllocationForm(
+      Object.fromEntries(
+        defaultRule.members.map((member) => [
+          member.user_id,
+          percentageInputValue(member.percentage),
+        ]),
+      ),
+    );
+  }, [defaultRule]);
 
   useEffect(() => {
     if (
@@ -458,6 +488,49 @@ function Dashboard({
       setMutationError(errorMessage(saveError));
     } finally {
       setMutating(false);
+    }
+  }
+
+  async function saveAllocation() {
+    if (!online || savingAllocation || defaultRule === undefined) return;
+    const members = defaultRule.members.map((member) => ({
+      user_id: member.user_id,
+      percentage: (allocationForm[member.user_id] ?? "0").replace(",", "."),
+    }));
+    const percentages = members.map((member) => Number(member.percentage));
+    if (
+      percentages.some(
+        (percentage) =>
+          !Number.isFinite(percentage) ||
+          percentage < 0 ||
+          percentage > 100,
+      )
+    ) {
+      setAllocationError("Chaque pourcentage doit être compris entre 0 et 100.");
+      return;
+    }
+    const total = percentages.reduce((sum, percentage) => sum + percentage, 0);
+    if (total > 100.0001) {
+      setAllocationError("La somme des pourcentages ne peut pas dépasser 100 %.");
+      return;
+    }
+    if (defaultRule.members.length > 1 && Math.abs(total - 100) > 0.0001) {
+      setAllocationError("La somme des pourcentages doit être égale à 100 %.");
+      return;
+    }
+
+    setSavingAllocation(true);
+    setAllocationError(null);
+    try {
+      await api("/api/v1/households/me/allocation-rules/default", {
+        method: "PUT",
+        body: { members },
+      });
+      await refresh();
+    } catch (saveError) {
+      setAllocationError(errorMessage(saveError));
+    } finally {
+      setSavingAllocation(false);
     }
   }
 
@@ -1263,11 +1336,98 @@ function Dashboard({
                         <strong>{member.first_name}</strong>
                         <span>{member.email}</span>
                       </div>
-                      <strong>
-                        {Number(member.percentage).toFixed(0)} %
-                      </strong>
+                      {session.role === "owner" ? (
+                        <label className="percentage-field">
+                          <input
+                            className="percentage-input"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={allocationForm[member.user_id] ?? ""}
+                            onChange={(event) =>
+                              setAllocationForm({
+                                ...allocationForm,
+                                [member.user_id]: event.target.value,
+                              })
+                            }
+                            aria-label={`Pourcentage de ${member.first_name}`}
+                          />
+                          <span>%</span>
+                        </label>
+                      ) : (
+                        <strong>
+                          {Number(member.percentage).toFixed(0)} %
+                        </strong>
+                      )}
                     </div>
                   ))}
+                  {defaultRule !== undefined && (
+                    <>
+                      <div className="card-foot">
+                        <span>Total attribué</span>
+                        <strong>
+                          {allocationTotal.toLocaleString("fr-FR", {
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          %
+                        </strong>
+                      </div>
+                      {defaultRule.members.length === 1 && (
+                        <div className="allocation-actions">
+                          <button
+                            type="button"
+                            className="outline-button"
+                            onClick={() =>
+                              setAllocationForm({
+                                [defaultRule.members[0].user_id]: "55",
+                              })
+                            }
+                            disabled={!online || session.role !== "owner"}
+                          >
+                            Appliquer 55 %
+                          </button>
+                          <button
+                            type="button"
+                            className="outline-button"
+                            onClick={() =>
+                              setAllocationForm({
+                                [defaultRule.members[0].user_id]: "100",
+                              })
+                            }
+                            disabled={!online || session.role !== "owner"}
+                          >
+                            Remettre 100 %
+                          </button>
+                        </div>
+                      )}
+                      <p className="form-hint">
+                        {defaultRule.members.length === 1
+                          ? "Une part inférieure à 100 % laisse le reste non attribué : il ne sera pas suivi dans les contributions."
+                          : "La somme des pourcentages doit être égale à 100 %."}
+                      </p>
+                      {allocationError !== null && (
+                        <p className="form-error" role="alert">
+                          {allocationError}
+                        </p>
+                      )}
+                      {session.role === "owner" ? (
+                        <button
+                          type="button"
+                          className="add-button"
+                          onClick={() => void saveAllocation()}
+                          disabled={!online || savingAllocation}
+                        >
+                          <Check size={16} /> Enregistrer la répartition
+                        </button>
+                      ) : (
+                        <p className="form-hint">
+                          Seul le propriétaire du foyer peut modifier la
+                          répartition.
+                        </p>
+                      )}
+                    </>
+                  )}
                   {defaultRule === undefined && (
                     <EmptyState label="Aucune règle de répartition." />
                   )}
@@ -2029,6 +2189,11 @@ function progress(spent: number, allocated: number): number {
     return 0;
   }
   return Math.min(100, Math.round((spent / allocated) * 100));
+}
+
+function percentageInputValue(value: string): string {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(parsed) : value;
 }
 
 function percentageFor(

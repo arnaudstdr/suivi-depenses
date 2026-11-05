@@ -156,6 +156,30 @@ describe("App", () => {
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === "string" ? input : input.toString();
         if (
+          url.includes("/api/v1/households/me/allocation-rules/default") &&
+          init?.method === "PUT"
+        ) {
+          return json({
+            id: "rule-1",
+            name: "Répartition par défaut",
+            is_default: true,
+            members: [
+              {
+                user_id: "user-1",
+                email: "owner@example.com",
+                first_name: "Alice",
+                percentage: "60.000",
+              },
+              {
+                user_id: "user-2",
+                email: "member@example.com",
+                first_name: "Bob",
+                percentage: "40.000",
+              },
+            ],
+          });
+        }
+        if (
           url.includes("/api/v1/recurring-expenses") &&
           init?.method === "POST"
         ) {
@@ -323,6 +347,39 @@ describe("App", () => {
         ([url, init]) =>
           String(url).includes("/api/v1/recurring-expenses") &&
           init?.method === "POST",
+      ),
+    ).toBe(true);
+  });
+
+  it("permet de modifier la répartition par défaut", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(
+      await screen.findByLabelText("Adresse email"),
+      "owner@example.com",
+    );
+    await user.type(screen.getByLabelText("Mot de passe"), "secret-password");
+    await user.click(screen.getByRole("button", { name: /Se connecter/i }));
+    await screen.findByRole("heading", { name: "Mon budget personnel" });
+
+    await user.click(screen.getByRole("button", { name: "Répartition" }));
+
+    const alice = await screen.findByLabelText("Pourcentage de Alice");
+    await user.clear(alice);
+    await user.type(alice, "60");
+    const bob = screen.getByLabelText("Pourcentage de Bob");
+    await user.clear(bob);
+    await user.type(bob, "40");
+    await user.click(
+      screen.getByRole("button", { name: /Enregistrer la répartition/i }),
+    );
+
+    expect(
+      vi.mocked(fetch).mock.calls.some(
+        ([url, init]) =>
+          String(url).includes(
+            "/api/v1/households/me/allocation-rules/default",
+          ) && init?.method === "PUT",
       ),
     ).toBe(true);
   });

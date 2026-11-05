@@ -59,3 +59,6 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .modal label.checkbox-row input{width:auto;margin:0}
 .empty-state p{margin:0 0 10px}
 .empty-state .outline-button{margin:0 auto}
+.percentage-field{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
+.percentage-input{width:88px;border:1px solid var(--line,#e6e1ee);border-radius:9px;padding:7px 9px;font:inherit;background:var(--surface,#fff);color:inherit;text-align:right}
+.allocation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
