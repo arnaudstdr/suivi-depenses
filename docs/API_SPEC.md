@@ -1,6 +1,6 @@
 # Spécification API REST — Suivi des dépenses
 
-**Version :** 0.5  
+**Version :** 0.6  
 **Statut :** Contrat conceptuel aligné sur les règles métier  
 **Base URL :** `/api/v1`  
 **Backend :** FastAPI / Pydantic v2
@@ -131,10 +131,13 @@ Règles :
 | PATCH | `/recurring-expenses/{id}` | Modifier |
 | POST | `/recurring-expenses/{id}/deactivate` | Désactiver |
 | GET | `/recurring-expenses/{id}/occurrences` | Échéances |
+| POST | `/recurring-occurrences/{occurrence_id}/mark-paid` | Pointer une échéance comme payée |
 
 Champs de création : `label`, `amount_cents`, `category_id`, `scope` (personal/shared), `frequency`, `start_date`, `end_date`, `due_day`, `amount_is_variable`, et, si shared, une règle de répartition par défaut ou spécifique.
 
 Une charge commune est répartie selon les pourcentages configurés. La part de l'utilisateur connecté est agrégée avec les autres charges communes dans la ligne « Participation au foyer » du tableau de bord personnel. Les détails par charge sont accessibles dans l'écran Charges.
+
+Le pointage d'une occurrence se fait explicitement après le paiement réel. Le corps de `POST /recurring-occurrences/{occurrence_id}/mark-paid` accepte `paid_at`, `payment_amount_cents` et une note facultative. Le serveur passe l'occurrence à `paid`, crée ou associe une transaction réelle de manière idempotente et journalise l'opération. Pour une charge variable, `payment_amount_cents` est obligatoire ; pour une charge fixe, il est proposé à partir du montant attendu et peut être corrigé. Le montant payé après le dernier instantané de solde reste déduit du disponible jusqu'à une nouvelle saisie du solde. Une échéance déjà payée ne peut pas être repointée sans action de correction dédiée.
 
 ## 8. Dépenses ponctuelles prévues
 
