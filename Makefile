@@ -1,4 +1,4 @@
-.PHONY: install dev lint format typecheck test db-up db-down migrate revision check-migrations
+.PHONY: install dev lint format typecheck test db-up db-down build up down migrate revision check-migrations
 
 install:
 	cd backend && uv sync --frozen
@@ -23,6 +23,17 @@ db-up:
 
 db-down:
 	docker compose down
+
+# Déploiement Docker (frontend + API + PostgreSQL), adapté à un Raspberry Pi.
+build:
+	docker compose --profile docker build api frontend
+
+up: build
+	docker compose --profile docker run --rm api alembic upgrade head
+	docker compose --profile docker up -d api frontend
+
+down:
+	docker compose --profile docker down
 
 migrate:
 	cd backend && uv run alembic upgrade head

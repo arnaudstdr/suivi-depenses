@@ -3,6 +3,7 @@ name: suivi-depenses
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-suivi_depenses}
       POSTGRES_USER: ${POSTGRES_USER:-suivi}
@@ -20,6 +21,7 @@ services:
 
   api:
     profiles: ["docker"]
+    restart: unless-stopped
     build:
       context: ./backend
     environment:
@@ -35,8 +37,31 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     ports:
       - "127.0.0.1:8000:8000"
+
+  frontend:
+    profiles: ["docker"]
+    restart: unless-stopped
+    build:
+      context: ./frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
 
 volumes:
   postgres_data:
