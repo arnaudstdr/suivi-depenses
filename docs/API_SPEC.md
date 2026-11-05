@@ -1,6 +1,6 @@
 # Spécification API REST — Suivi des dépenses
 
-**Version :** 0.1  
+**Version :** 0.2  
 **Statut :** Proposition technique à valider  
 **Base URL :** `/api/v1`  
 **Backend cible :** FastAPI / Pydantic v2  
@@ -633,14 +633,14 @@ Ne sont pas prévus :
 - synchronisation d'écritures hors ligne ;
 - gestion multi-devises.
 
-## 16. Points techniques à confirmer avant implémentation
+## 16. Décisions techniques validées
 
-1. **Session :** valider cookies de session et protection CSRF pour le domaine de déploiement retenu.
-2. **Inscription :** déterminer si les comptes sont créés par invitation ou par inscription libre temporaire.
-3. **Correction d'un calcul définitif :** définir la procédure d'administration et d'audit sans autoriser l'écrasement silencieux.
-4. **Prévisions :** confirmer si une charge prévisionnelle manuelle doit persister dans une table dédiée ou être directement matérialisée comme ligne source dans le calcul mensuel.
-5. **Solde personnel :** le contrat du tableau de bord personnel reste à préciser avec la définition métier du solde disponible.
+1. **Session :** authentification par cookies de session sécurisés (`HttpOnly`, `Secure`, `SameSite` adapté) avec protection CSRF sur les requêtes d'écriture. Aucun jeton de session n'est stocké dans le stockage JavaScript.
+2. **Inscription :** création des comptes par invitation uniquement. L'inscription publique est désactivée en V1. Le flux d'invitation devra prévoir un jeton aléatoire à usage unique, expirant, stocké sous forme hachée et invalidé après acceptation.
+3. **Correction d'un calcul définitif :** une correction est une opération explicite, autorisée et auditée, avec motif obligatoire. Elle met à jour le résultat définitif courant sans permettre de modification silencieuse. L'audit conserve l'acteur, la date, le motif et l'identifiant du calcul concerné. Le fonctionnement doit rester cohérent avec la règle d'une seule version définitive courante par période.
+4. **Prévisions :** les prévisions manuelles sont persistées comme ressources dédiées, modifiables et supprimables avant finalisation du calcul. Les prévisions issues de récurrences restent reliées à leurs occurrences. Les charges sont ensuite figées dans le snapshot du calcul définitif. Le modèle de données et l'ERD devront intégrer cette ressource dédiée.
+5. **Solde personnel :** la définition métier du solde disponible reste hors contrat V1 tant qu'elle n'est pas précisément définie. L'API ne doit pas exposer un indicateur de solde calculé sur une hypothèse implicite. Le tableau de bord peut afficher les revenus et dépenses réels séparément.
 
 ---
 
-**Fin — API_SPEC.md v0.1**
+**Fin — API_SPEC.md v0.2**
