@@ -1,6 +1,6 @@
 # Spécification API REST — Suivi des dépenses
 
-**Version :** 0.4  
+**Version :** 0.5  
 **Statut :** Contrat conceptuel aligné sur les règles métier  
 **Base URL :** `/api/v1`  
 **Backend :** FastAPI / Pydantic v2
@@ -45,7 +45,7 @@ Exemple PUT :
 }
 ```
 
-Le backend conserve l'horodatage et l'historique. Aucun accès bancaire externe n'est appelé. Un solde négatif est accepté.
+Le backend conserve l'horodatage et l'historique. Aucun accès bancaire externe n'est appelé. Un solde négatif est accepté. `recorded_at` est l'instantané de référence pour déterminer quelles sorties sont déjà reflétées.
 
 ## 4. Tableau de bord personnel
 
@@ -118,7 +118,7 @@ Règles :
 - `scope=personal` : dépense personnelle, rattachée à l'utilisateur connecté.
 - `scope=shared` + catégorie courses : dépense commune qui consomme le budget courses ; elle n'affecte pas le disponible personnel.
 - `scope=shared` hors courses : sa quote-part personnelle est intégrée à la participation au foyer, si elle est prévue et non payée depuis le budget personnel.
-- Une transaction payée n'est plus déduite comme prévision.
+- Une transaction comporte `paid_at`, horodatage réel du paiement. Si `paid_at` est postérieur au dernier `recorded_at`, la sortie reste déduite du disponible jusqu'à une nouvelle saisie de solde. Si `paid_at` est antérieur ou égal à `recorded_at`, elle est déjà reflétée et n'est pas déduite.
 - Le serveur déduit l'identité du créateur de la session.
 
 ## 7. Charges récurrentes
