@@ -163,14 +163,16 @@ Règles :
 | GET | `/recurring-expenses/{id}` | Détail |
 | PATCH | `/recurring-expenses/{id}` | Modifier |
 | POST | `/recurring-expenses/{id}/deactivate` | Désactiver |
-| GET | `/recurring-expenses/{id}/occurrences` | Échéances |
+| GET | `/recurring-expenses/{id}/occurrences?period=YYYY-MM&status=...` | Échéances générées pour la période |
 | POST | `/recurring-occurrences/{occurrence_id}/mark-paid` | Pointer une échéance comme payée |
 
-Champs de création : `label`, `amount_cents`, `category_id`, `scope` (personal/shared), `frequency`, `start_date`, `end_date`, `due_day`, `amount_is_variable`, et, si shared, une règle de répartition par défaut ou spécifique.
+Champs de création : `label`, `amount_cents`, `category_id`, `scope` (personal/shared), `frequency` (`weekly`, `monthly`, `quarterly`, `semiannual`, `yearly`), `start_date`, `end_date`, `due_day`, `amount_is_variable`. Une charge fixe exige `amount_cents`. La liaison à une règle de répartition spécifique sera ajoutée en 4.3.
+
+Les occurrences sont générées à la demande pour la période demandée, de manière idempotente. Le jour d'échéance est ramené au dernier jour du mois si nécessaire. Une charge désactivée ne génère plus de nouvelles occurrences.
 
 Une charge commune est répartie selon les pourcentages configurés. La part de l'utilisateur connecté est agrégée avec les autres charges communes dans la ligne « Participation au foyer » du tableau de bord personnel. Les détails par charge sont accessibles dans l'écran Charges.
 
-Le pointage d'une occurrence se fait explicitement après le paiement réel. Le corps de `POST /recurring-occurrences/{occurrence_id}/mark-paid` accepte `paid_at`, `payment_amount_cents` et une note facultative. Le serveur passe l'occurrence à `paid`, crée ou associe une transaction réelle de manière idempotente et journalise l'opération. Pour une charge variable, `payment_amount_cents` est obligatoire ; pour une charge fixe, il est proposé à partir du montant attendu et peut être corrigé. Le montant payé après le dernier instantané de solde reste déduit du disponible jusqu'à une nouvelle saisie du solde. Une échéance déjà payée ne peut pas être repointée sans action de correction dédiée.
+Le pointage d'une occurrence se fait explicitement après le paiement réel. Le corps de `POST /recurring-occurrences/{occurrence_id}/mark-paid` accepte `paid_at`, `payment_amount_cents` et une note facultative. Le serveur passe l'occurrence à `paid`, crée une transaction réelle liée de manière idempotente et journalise l'opération. Pour une charge variable, `payment_amount_cents` est obligatoire ; pour une charge fixe, il est proposé à partir du montant attendu et peut être corrigé. Le montant payé après le dernier instantané de solde reste déduit du disponible jusqu'à une nouvelle saisie du solde. Une échéance déjà payée n'est pas repointée : la seconde demande renvoie l'occurrence existante.
 
 ## 8. Dépenses ponctuelles prévues
 
@@ -182,7 +184,9 @@ Le pointage d'une occurrence se fait explicitement après le paiement réel. Le 
 | POST | `/planned-expenses/{id}/mark-paid` | Marquer payée |
 | DELETE | `/planned-expenses/{id}` | Annuler |
 
-Une dépense personnelle prévue ou engagée est déduite. Si elle est payée après le dernier instantané de solde, elle reste déduite jusqu'à la prochaine saisie du solde ; si elle est payée avant l'instantané, elle est exclue. Une dépense commune hors courses est répartie et agrégée dans la participation au foyer. Une dépense commune de courses consomme uniquement le budget courses.
+Statuts disponibles : `planned`, `committed`, `paid`, `cancelled`. Les statuts `planned` et `committed` sont déduits. Une dépense personnelle prévue ou engagée est déduite. Si elle est payée après le dernier instantané de solde, elle reste déduite jusqu'à la prochaine saisie du solde ; si elle est payée avant l'instantané, elle est exclue. Une dépense commune hors courses est répartie et agrégée dans la participation au foyer. Une dépense commune de courses consomme uniquement le budget courses au moment du paiement.
+
+`POST /planned-expenses/{id}/mark-paid` accepte `paid_at`, `payment_amount_cents` facultatif et une note. Le pointage est idempotent et crée une transaction liée. `DELETE /planned-expenses/{id}` annule la dépense ; une dépense déjà payée ne peut pas être annulée.
 
 ## 9. Budget courses du foyer
 

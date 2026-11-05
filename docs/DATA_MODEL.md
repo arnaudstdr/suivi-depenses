@@ -181,7 +181,7 @@ Règles :
 - Une transaction commune hors courses est répartie selon la règle configurée ; sa quote-part personnelle alimente la ligne agrégée Participation au foyer.
 - Une dépense est enregistrée une seule fois.
 - Un remboursement est une transaction distincte liée à l'originale.
-- `recurring_occurrence_id` sera ajouté avec la tranche des récurrences ; il n'est pas encore présent dans la migration `0003`.
+- `recurring_occurrence_id` est ajouté par la migration `0004_forecast` et référence l'échéance à l'origine de la transaction.
 - Les transactions sont créées avec `status='paid'` et un `paid_at` renseigné. Si `paid_at` est omis, le serveur utilise midi dans le fuseau du foyer.
 - La suppression est logique via `deleted_at`; une dépense ayant des remboursements ne peut pas être supprimée.
 - Un remboursement ne peut pas dépasser le montant encore remboursable de la dépense d'origine.
@@ -205,7 +205,7 @@ Règles :
 | is_active | BOOLEAN | NOT NULL |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Pour une charge shared, la règle de répartition est résolue à partir de la règle par défaut du foyer ou d'une règle spécifique à cette charge.
+Pour une charge shared, la règle de répartition sera résolue à partir de la règle par défaut du foyer ou d'une règle spécifique à cette charge. Le lien structurel vers les règles de répartition est ajouté avec la tranche 4.3.
 
 ## 8. recurring_occurrences
 
@@ -223,7 +223,7 @@ Pour une charge shared, la règle de répartition est résolue à partir de la r
 | transaction_id | UUID nullable | FK transactions, UNIQUE |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Contrainte UNIQUE (recurring_expense_id, due_date). La génération des occurrences est idempotente. Le pointage `paid` renseigne `paid_at`, confirme `payment_amount_cents`, crée ou associe une transaction réelle et renseigne son `paid_at`. Le pointage est idempotent : une seconde demande ne crée pas une deuxième transaction. Toute correction d'un paiement déjà pointé est une opération explicite et auditée.
+Contrainte UNIQUE (recurring_expense_id, due_date). La génération des occurrences est idempotente pour une période demandée. Le pointage `paid` renseigne `paid_at`, confirme `payment_amount_cents`, crée ou associe une transaction réelle, renseigne son `paid_at` et lie les deux enregistrements. Le pointage est idempotent : une seconde demande ne crée pas une deuxième transaction. Toute correction d'un paiement déjà pointé est une opération explicite et auditée. Les statuts `confirmed` et `skipped` sont supportés par le modèle ; l'API de la tranche 4.2 expose le pointage payé.
 
 ## 9. planned_expenses
 
@@ -239,11 +239,11 @@ Dépenses ponctuelles prévues mais pas encore payées.
 | amount_cents | BIGINT | CHECK > 0 |
 | scope | VARCHAR(20) | personal / shared |
 | planned_date | DATE | NOT NULL |
-| status | VARCHAR(20) | planned / paid / cancelled |
+| status | VARCHAR(20) | planned / committed / paid / cancelled |
 | transaction_id | UUID nullable | FK transactions |
 | created_at / updated_at | TIMESTAMPTZ | NOT NULL |
 
-Les dépenses ponctuelles communes hors courses sont réparties et intégrées à la participation au foyer. Les dépenses ponctuelles de courses communes consomment le budget courses et ne sont pas ajoutées au suivi personnel.
+Les dépenses ponctuelles communes hors courses sont réparties et intégrées à la participation au foyer. Les dépenses ponctuelles de courses communes consomment le budget courses uniquement au moment du paiement, via la transaction créée. Le pointage payé est idempotent et lie une transaction unique. Une dépense annulée ou déjà payée ne peut plus être modifiée.
 
 ## 10. Budgets et périodes
 

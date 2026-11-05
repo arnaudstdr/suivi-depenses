@@ -65,6 +65,7 @@ class TransactionPublic(BaseModel):
     paid_at: datetime | None
     status: str
     original_transaction_id: UUID | None
+    recurring_occurrence_id: UUID | None
     notes: str | None
     created_at: datetime
     updated_at: datetime

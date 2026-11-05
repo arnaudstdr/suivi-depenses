@@ -7,15 +7,12 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
 from app.core.errors import AppError
+from app.core.periods import current_period, parse_period
 from app.core.request_context import request_id_var
 from app.domains.audit.repository import AuditRepository
-from app.domains.budgets.service import (
-    current_period,
-    ensure_grocery_budget,
-    parse_period,
-)
+from app.domains.budgets.service import ensure_grocery_budget
+from app.domains.categories.access import get_usable_category
 from app.domains.categories.models import Category
-from app.domains.categories.repository import CategoryRepository
 from app.domains.households.models import HouseholdMember
 from app.domains.transactions.models import Transaction
 from app.domains.transactions.repository import TransactionRepository
@@ -41,7 +38,6 @@ class TransactionService:
         self._db = db
         self._now = now or utcnow
         self._transactions = TransactionRepository(db)
-        self._categories = CategoryRepository(db)
         self._audit = AuditRepository(db)
 
     def create(
@@ -49,6 +45,10 @@ class TransactionService:
         membership: HouseholdMember,
         user: User,
         payload: TransactionCreate,
+        *,
+        recurring_occurrence_id: uuid.UUID | None = None,
+        commit: bool = True,
+        allow_inactive_category: bool = False,
     ) -> Transaction:
         if payload.transaction_type == "refund":
             if payload.original_transaction_id is None:
@@ -75,7 +75,11 @@ class TransactionService:
             budget_id = original.budget_id
             category_id = original.category_id
         else:
-            category = self._usable_category(membership, payload.category_id)
+            category = self._usable_category(
+                membership,
+                payload.category_id,
+                require_active=not allow_inactive_category,
+            )
             category_id = category.id
 
             if payload.scope == "personal":
@@ -115,6 +119,7 @@ class TransactionService:
             paid_at=paid_at,
             status="paid",
             original_transaction_id=payload.original_transaction_id,
+            recurring_occurrence_id=recurring_occurrence_id,
             notes=payload.notes,
         )
         self._transactions.add(transaction)
@@ -130,7 +135,8 @@ class TransactionService:
             details={"scope": payload.scope, "type": payload.transaction_type},
             request_id=request_id_var.get(),
         )
-        self._db.commit()
+        if commit:
+            self._db.commit()
         return transaction
 
     def get(
@@ -298,21 +304,15 @@ class TransactionService:
         self,
         membership: HouseholdMember,
         category_id: uuid.UUID,
+        *,
+        require_active: bool = True,
     ) -> Category:
-        category = self._categories.get_by_id(category_id)
-        if category is None or not category.is_active:
-            raise AppError(
-                code="invalid_category",
-                message="Catégorie introuvable ou inactive.",
-                status_code=422,
-            )
-        if category.household_id is not None and category.household_id != membership.household_id:
-            raise AppError(
-                code="invalid_category",
-                message="Catégorie introuvable ou inactive.",
-                status_code=422,
-            )
-        return category
+        return get_usable_category(
+            self._db,
+            membership.household_id,
+            category_id,
+            require_active=require_active,
+        )
 
     def _validate_amount_change(self, transaction: Transaction, amount_cents: int) -> None:
         if transaction.transaction_type == "expense":

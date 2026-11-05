@@ -137,6 +137,7 @@ erDiagram
       timestamptz paid_at
       varchar status
       uuid original_transaction_id FK
+      uuid recurring_occurrence_id FK
       timestamptz deleted_at
     }
     RECURRING_EXPENSES {
@@ -144,26 +145,39 @@ erDiagram
       uuid household_id FK
       uuid owner_user_id FK
       uuid category_id FK
+      varchar label
       bigint amount_cents
       varchar scope
       varchar frequency
+      date start_date
+      date end_date
+      smallint due_day
+      boolean amount_is_variable
+      boolean is_active
     }
     RECURRING_OCCURRENCES {
       uuid id PK
       uuid recurring_expense_id FK
       uuid transaction_id FK
       date due_date
+      bigint expected_amount_cents
+      bigint confirmed_amount_cents
       varchar status
+      timestamptz paid_at
+      bigint payment_amount_cents
+      text payment_note
     }
     PLANNED_EXPENSES {
       uuid id PK
       uuid household_id FK
       uuid user_id FK
       uuid category_id FK
+      varchar label
       bigint amount_cents
       varchar scope
       date planned_date
       varchar status
+      uuid transaction_id FK
     }
     BUDGETS {
       uuid id PK
@@ -205,6 +219,6 @@ erDiagram
 5. La participation au foyer inclut les charges communes et la contribution au budget courses ; son virement est suivi par mois et par membre.
 6. Le solde manuel est un instantané daté : toute sortie postérieure reste déduite, même si elle est marquée payée, jusqu'à une nouvelle saisie du solde.
 7. Les achats de courses communes sont imputés au budget courses du foyer (490 € par défaut), jamais au disponible personnel.
-8. Une occurrence récurrente payée référence une transaction ; une échéance ne peut être générée deux fois.
+8. Une occurrence récurrente payée référence une transaction ; une échéance ne peut être générée deux fois. La transaction et l'occurrence se référencent mutuellement et de façon unique.
 9. Le disponible prévisionnel ne prend aucun revenu futur en compte.
 10. Les sommes sont en centimes entiers et les périodes budgétaires sont mensuelles sans report.

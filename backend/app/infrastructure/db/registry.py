@@ -6,6 +6,8 @@ from app.domains.balances.models import PersonalBalanceEntry
 from app.domains.budgets.models import Budget, BudgetPeriod
 from app.domains.categories.models import Category
 from app.domains.households.models import Household, HouseholdMember
+from app.domains.planned.models import PlannedExpense
+from app.domains.recurring.models import RecurringExpense, RecurringOccurrence
 from app.domains.transactions.models import Transaction
 from app.domains.users.models import User
 
@@ -19,6 +21,9 @@ __all__ = [
     "HouseholdMember",
     "Invitation",
     "PersonalBalanceEntry",
+    "PlannedExpense",
+    "RecurringExpense",
+    "RecurringOccurrence",
     "Transaction",
     "User",
 ]

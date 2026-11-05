@@ -17,6 +17,9 @@ EXPECTED_TABLES = {
     "transactions",
     "budgets",
     "budget_periods",
+    "planned_expenses",
+    "recurring_expenses",
+    "recurring_occurrences",
 }
 
 
@@ -84,6 +87,35 @@ def test_financial_core_migration_upgrades_previous_schema(test_database_url: st
         with engine.connect() as connection:
             category_count = connection.scalar(text("SELECT count(*) FROM categories"))
         assert category_count == 8
+
+        engine.dispose()
+
+
+@pytest.mark.integration
+def test_forecast_migration_upgrades_previous_schema(test_database_url: str) -> None:
+    with temporary_database(test_database_url) as database_url:
+        engine = create_engine(database_url)
+
+        upgrade_database(database_url, "0003_financial_core")
+        table_names = set(inspect(engine).get_table_names())
+        assert {"transactions", "budgets", "budget_periods"} <= table_names
+        assert {
+            "planned_expenses",
+            "recurring_expenses",
+            "recurring_occurrences",
+        }.isdisjoint(table_names)
+        transaction_columns = {
+            column["name"] for column in inspect(engine).get_columns("transactions")
+        }
+        assert "recurring_occurrence_id" not in transaction_columns
+
+        upgrade_database(database_url, "head")
+        table_names = set(inspect(engine).get_table_names())
+        assert table_names >= EXPECTED_TABLES
+        transaction_columns = {
+            column["name"] for column in inspect(engine).get_columns("transactions")
+        }
+        assert "recurring_occurrence_id" in transaction_columns
 
         engine.dispose()
 

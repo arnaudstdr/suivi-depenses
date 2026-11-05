@@ -208,9 +208,9 @@ Créer des tests unitaires dédiés à ces cas, y compris les paiements juste av
 - Le backend FastAPI/SQLAlchemy/Alembic est présent dans `backend/`, avec les tables d'identité, de sécurité et le socle financier (`personal_balance_entries`, `categories`, `transactions`, `budgets`, `budget_periods`).
 - Les migrations Alembic, les tests backend, Docker Compose pour PostgreSQL, le Dockerfile API et la CI GitHub Actions sont présents.
 - Le socle sécurisé est implémenté : bootstrap CLI, sessions opaques, cookies sécurisés, CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et audit.
-- La tranche 4.1 du suivi financier est implémentée : solde personnel, catégories, transactions personnelles/communes/courses, remboursements et budget courses.
+- Les tranches 4.1 et 4.2 du suivi financier sont implémentées : solde personnel, catégories, transactions, remboursements, budget courses, dépenses prévues, charges récurrentes, occurrences et pointage.
 - Le frontend possède les scripts npm `dev`, `build` et `preview`; il n'existe pas encore de script `lint` ou `test` déclaré dans son `package.json`.
 - Les commandes backend réellement disponibles sont documentées dans `backend/README.md` et dans le `Makefile`.
-- La prochaine tranche est 4.2 : dépenses prévues, récurrences et occurrences.
+- La prochaine tranche est 4.3 : répartition, participation au foyer et contribution au budget courses.
 
 Cette section doit être mise à jour lorsque l'architecture réelle du dépôt évolue. Ne pas créer des fichiers ou commandes manquants en supposant qu'ils existent.

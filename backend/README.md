@@ -140,6 +140,41 @@ Règles principales :
   supprimée.
 - Les montants sont des centimes entiers stricts.
 
+## Suivi financier — tranche 4.2
+
+La migration `0004_forecast` ajoute :
+
+- les dépenses ponctuelles prévues (`planned`, `committed`, `paid`, `cancelled`) ;
+- les charges récurrentes et leurs occurrences ;
+- le lien `transactions.recurring_occurrence_id`.
+
+Endpoints ajoutés :
+
+- `GET/POST /api/v1/planned-expenses`
+- `GET/PATCH/DELETE /api/v1/planned-expenses/{id}`
+- `POST /api/v1/planned-expenses/{id}/mark-paid`
+- `GET/POST /api/v1/recurring-expenses`
+- `GET/PATCH /api/v1/recurring-expenses/{id}`
+- `POST /api/v1/recurring-expenses/{id}/deactivate`
+- `GET /api/v1/recurring-expenses/{id}/occurrences?period=YYYY-MM`
+- `POST /api/v1/recurring-occurrences/{id}/mark-paid`
+
+Règles principales :
+
+- Les occurrences sont générées à la demande pour une période, de façon
+  idempotente, avec unicité `(recurring_expense_id, due_date)`.
+- Les fréquences `weekly`, `monthly`, `quarterly`, `semiannual` et `yearly` sont
+  supportées. Un jour d'échéance trop grand est ramené au dernier jour du mois.
+- Une charge fixe exige un montant. Une charge variable exige un montant réel
+  au pointage.
+- Le pointage crée une transaction dans la même transaction SQL et lie les deux
+  enregistrements de façon unique. Un second pointage renvoie l'existant.
+- Une dépense prévue payée crée aussi une transaction unique et idempotente.
+- Une dépense prévue annulée ne peut plus être payée ; une dépense payée ne peut
+  plus être annulée.
+- Une charge récurrente désactivée ne génère plus de nouvelles occurrences.
+- Les règles de répartition par charge restent en tranche 4.3.
+
 ## Contrôles
 
 ```bash

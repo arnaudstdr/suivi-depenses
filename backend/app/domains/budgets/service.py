@@ -1,16 +1,15 @@
-import calendar
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Final
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
 from app.core.errors import AppError
+from app.core.periods import current_period, parse_period
 from app.core.request_context import request_id_var
 from app.domains.audit.repository import AuditRepository
 from app.domains.budgets.models import Budget, BudgetPeriod
@@ -22,7 +21,6 @@ from app.domains.transactions.models import Transaction
 
 GROCERY_BUDGET_NAME: Final = "Budget courses"
 GROCERY_BUDGET_DEFAULT_CENTS: Final = 49_000
-HOUSEHOLD_TIMEZONE: Final = "Europe/Paris"
 
 
 def ensure_grocery_budget(db: Session, household_id: uuid.UUID) -> Budget:
@@ -42,23 +40,6 @@ def ensure_grocery_budget(db: Session, household_id: uuid.UUID) -> Budget:
     db.add(budget)
     db.flush()
     return budget
-
-
-def parse_period(period: str) -> tuple[date, date]:
-    try:
-        start = datetime.strptime(period, "%Y-%m").date().replace(day=1)
-    except ValueError as exc:
-        raise AppError(
-            code="invalid_period",
-            message="La période doit être au format YYYY-MM.",
-            status_code=422,
-        ) from exc
-    last_day = calendar.monthrange(start.year, start.month)[1]
-    return start, start.replace(day=last_day)
-
-
-def current_period(timezone: str = HOUSEHOLD_TIMEZONE) -> str:
-    return datetime.now(ZoneInfo(timezone)).strftime("%Y-%m")
 
 
 @dataclass(frozen=True)

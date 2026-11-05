@@ -6,6 +6,9 @@ from app.domains.balances.router import router as balances_router
 from app.domains.budgets.router import router as budgets_router
 from app.domains.categories.router import router as categories_router
 from app.domains.households.router import router as households_router
+from app.domains.planned.router import router as planned_router
+from app.domains.recurring.router import occurrences_router
+from app.domains.recurring.router import router as recurring_router
 from app.domains.transactions.router import router as transactions_router
 from app.domains.users.router import router as users_router
 
@@ -18,3 +21,6 @@ api_v1_router.include_router(balances_router)
 api_v1_router.include_router(categories_router)
 api_v1_router.include_router(transactions_router)
 api_v1_router.include_router(budgets_router)
+api_v1_router.include_router(planned_router)
+api_v1_router.include_router(recurring_router)
+api_v1_router.include_router(occurrences_router)

@@ -96,6 +96,15 @@ class Transaction(Base, TimestampMixin):
         ForeignKey("transactions.id", ondelete="SET NULL"),
         nullable=True,
     )
+    recurring_occurrence_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey(
+            "recurring_occurrences.id",
+            ondelete="SET NULL",
+            use_alter=True,
+        ),
+        nullable=True,
+        unique=True,
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
