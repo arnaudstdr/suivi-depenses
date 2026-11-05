@@ -153,8 +153,32 @@ describe("App", () => {
     window.localStorage.clear();
     vi.stubGlobal(
       "fetch",
-      vi.fn((input: RequestInfo | URL) => {
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === "string" ? input : input.toString();
+        if (
+          url.includes("/api/v1/recurring-expenses") &&
+          init?.method === "POST"
+        ) {
+          return json(
+            {
+              id: "recurring-created",
+              household_id: null,
+              owner_user_id: "user-1",
+              category_id: "category-transport",
+              allocation_rule_id: null,
+              label: "Assurance auto",
+              amount_cents: 1999,
+              scope: "personal",
+              frequency: "monthly",
+              start_date: "2026-11-05",
+              end_date: null,
+              due_day: 5,
+              amount_is_variable: false,
+              is_active: true,
+            },
+            201,
+          );
+        }
         if (url.includes("/api/v1/auth/csrf")) {
           return json({ csrf_token: "csrf-token" });
         }
@@ -265,6 +289,42 @@ describe("App", () => {
     expect(screen.getByText("Téléphone")).toBeVisible();
     expect(screen.getByText("Carburant")).toBeVisible();
     expect(screen.getByText("Alice")).toBeVisible();
+  });
+
+  it("permet de créer une charge récurrente", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(
+      await screen.findByLabelText("Adresse email"),
+      "owner@example.com",
+    );
+    await user.type(screen.getByLabelText("Mot de passe"), "secret-password");
+    await user.click(screen.getByRole("button", { name: /Se connecter/i }));
+    await screen.findByRole("heading", { name: "Mon budget personnel" });
+
+    await user.click(
+      screen.getByRole("button", { name: "Charges récurrentes" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /Ajouter une charge/i }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Nouvelle charge récurrente",
+      }),
+    ).toBeVisible();
+
+    await user.type(screen.getByLabelText("Libellé"), "Assurance auto");
+    await user.type(screen.getByLabelText("Montant (€)"), "19.99");
+    await user.click(screen.getByRole("button", { name: /Créer la charge/i }));
+
+    expect(
+      vi.mocked(fetch).mock.calls.some(
+        ([url, init]) =>
+          String(url).includes("/api/v1/recurring-expenses") &&
+          init?.method === "POST",
+      ),
+    ).toBe(true);
   });
 
   it("passe en lecture seule hors ligne", async () => {

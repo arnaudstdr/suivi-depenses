@@ -59,6 +59,18 @@ type RecurringTarget = {
   dueDate: string;
 };
 
+type RecurringForm = {
+  label: string;
+  amount: string;
+  categoryId: string;
+  scope: Scope;
+  frequency: "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly";
+  startDate: string;
+  endDate: string;
+  dueDay: string;
+  amountIsVariable: boolean;
+};
+
 const nav = [
   { label: "Vue d'ensemble" as Section, icon: LayoutDashboard },
   { label: "Dépenses" as Section, icon: ArrowLeftRight },
@@ -112,6 +124,7 @@ function Dashboard({
   const [showBalance, setShowBalance] = useState(false);
   const [showContribution, setShowContribution] = useState(false);
   const [showRecurring, setShowRecurring] = useState(false);
+  const [showAddRecurring, setShowAddRecurring] = useState(false);
   const [selectedRecurring, setSelectedRecurring] =
     useState<RecurringTarget | null>(null);
   const [form, setForm] = useState({
@@ -125,6 +138,17 @@ function Dashboard({
   const [transferAmount, setTransferAmount] = useState("");
   const [recurringDate, setRecurringDate] = useState(todayISO());
   const [recurringAmount, setRecurringAmount] = useState("");
+  const [recurringForm, setRecurringForm] = useState<RecurringForm>({
+    label: "",
+    amount: "",
+    categoryId: "",
+    scope: "personal",
+    frequency: "monthly",
+    startDate: todayISO(),
+    endDate: "",
+    dueDay: String(new Date().getDate()),
+    amountIsVariable: false,
+  });
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutating, setMutating] = useState(false);
 
@@ -194,7 +218,8 @@ function Dashboard({
       !showAdd &&
       !showBalance &&
       !showContribution &&
-      !showRecurring
+      !showRecurring &&
+      !showAddRecurring
     ) {
       setMutationError(null);
     }
@@ -205,6 +230,7 @@ function Dashboard({
     showBalance,
     showContribution,
     showRecurring,
+    showAddRecurring,
   ]);
 
   function openExpense() {
@@ -235,6 +261,23 @@ function Dashboard({
     setRecurringDate(todayISO());
     setMutationError(null);
     setShowRecurring(true);
+  }
+
+  function openAddRecurring() {
+    if (!online) return;
+    setRecurringForm({
+      label: "",
+      amount: "",
+      categoryId: data.categories[0]?.id ?? "",
+      scope: "personal",
+      frequency: "monthly",
+      startDate: todayISO(),
+      endDate: "",
+      dueDay: String(new Date().getDate()),
+      amountIsVariable: false,
+    });
+    setMutationError(null);
+    setShowAddRecurring(true);
   }
 
   async function saveTransaction(event: FormEvent) {
@@ -349,6 +392,67 @@ function Dashboard({
       );
       setShowRecurring(false);
       setSelectedRecurring(null);
+      await refresh();
+    } catch (saveError) {
+      setMutationError(errorMessage(saveError));
+    } finally {
+      setMutating(false);
+    }
+  }
+
+  async function saveRecurringExpense(event: FormEvent) {
+    event.preventDefault();
+    if (!online || mutating) return;
+    const amountCents = recurringForm.amountIsVariable
+      ? recurringForm.amount.trim() === ""
+        ? null
+        : parseEurosToCents(recurringForm.amount)
+      : parseEurosToCents(recurringForm.amount);
+    if (recurringForm.label.trim() === "" || recurringForm.categoryId === "") {
+      setMutationError("Renseigne un libellé et une catégorie.");
+      return;
+    }
+    if (
+      amountCents === null &&
+      (recurringForm.amount.trim() !== "" || !recurringForm.amountIsVariable)
+    ) {
+      setMutationError("Renseigne un montant positif valide.");
+      return;
+    }
+    if (
+      recurringForm.endDate !== "" &&
+      recurringForm.endDate < recurringForm.startDate
+    ) {
+      setMutationError("La date de fin doit être postérieure à la date de début.");
+      return;
+    }
+    const dueDay =
+      recurringForm.frequency === "weekly" || recurringForm.dueDay.trim() === ""
+        ? null
+        : Number(recurringForm.dueDay);
+    if (dueDay !== null && (dueDay < 1 || dueDay > 31)) {
+      setMutationError("Le jour d'échéance doit être compris entre 1 et 31.");
+      return;
+    }
+
+    setMutating(true);
+    setMutationError(null);
+    try {
+      await api("/api/v1/recurring-expenses", {
+        method: "POST",
+        body: {
+          label: recurringForm.label.trim(),
+          amount_cents: amountCents,
+          category_id: recurringForm.categoryId,
+          scope: recurringForm.scope,
+          frequency: recurringForm.frequency,
+          start_date: recurringForm.startDate,
+          end_date: recurringForm.endDate === "" ? null : recurringForm.endDate,
+          due_day: dueDay,
+          amount_is_variable: recurringForm.amountIsVariable,
+        },
+      });
+      setShowAddRecurring(false);
       await refresh();
     } catch (saveError) {
       setMutationError(errorMessage(saveError));
@@ -1001,6 +1105,15 @@ function Dashboard({
                   <Plus size={16} /> Ajouter
                 </button>
               )}
+              {section === "Charges récurrentes" && (
+                <button
+                  className="add-button"
+                  onClick={openAddRecurring}
+                  disabled={!online}
+                >
+                  <Plus size={16} /> Ajouter une charge
+                </button>
+              )}
             </div>
 
             {section === "Dépenses" && (
@@ -1024,7 +1137,16 @@ function Dashboard({
               <article className="panel">
                 <div className="transaction-list">
                   {dashboard.upcoming_recurring.length === 0 && (
-                    <EmptyState label="Aucune échéance à venir." />
+                    <div className="empty-state">
+                      <p>Aucune échéance à venir.</p>
+                      <button
+                        className="outline-button"
+                        onClick={openAddRecurring}
+                        disabled={!online}
+                      >
+                        <Plus size={16} /> Ajouter une charge récurrente
+                      </button>
+                    </div>
                   )}
                   {dashboard.upcoming_recurring.map((item) => {
                     const recurring = recurringById.get(
@@ -1402,6 +1524,189 @@ function Dashboard({
                 disabled={!online || mutating}
               >
                 Enregistrer
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {showAddRecurring && (
+        <Modal
+          title="Nouvelle charge récurrente"
+          subtitle="Ajoute un abonnement, un prélèvement ou une charge commune."
+          onClose={() => setShowAddRecurring(false)}
+        >
+          <form onSubmit={saveRecurringExpense}>
+            <label>
+              Libellé
+              <input
+                placeholder="Ex. Assurance auto"
+                value={recurringForm.label}
+                onChange={(event) =>
+                  setRecurringForm({
+                    ...recurringForm,
+                    label: event.target.value,
+                  })
+                }
+              />
+            </label>
+            <div className="form-two">
+              <label>
+                Montant (€)
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder={
+                    recurringForm.amountIsVariable ? "Facultatif" : "0,00"
+                  }
+                  value={recurringForm.amount}
+                  onChange={(event) =>
+                    setRecurringForm({
+                      ...recurringForm,
+                      amount: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Catégorie
+                <select
+                  value={recurringForm.categoryId}
+                  onChange={(event) =>
+                    setRecurringForm({
+                      ...recurringForm,
+                      categoryId: event.target.value,
+                    })
+                  }
+                >
+                  {data.categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={recurringForm.amountIsVariable}
+                onChange={(event) =>
+                  setRecurringForm({
+                    ...recurringForm,
+                    amountIsVariable: event.target.checked,
+                  })
+                }
+              />
+              Montant variable
+            </label>
+            <div className="form-two">
+              <label>
+                Type
+                <select
+                  value={recurringForm.scope}
+                  onChange={(event) =>
+                    setRecurringForm({
+                      ...recurringForm,
+                      scope: event.target.value as Scope,
+                    })
+                  }
+                >
+                  <option value="personal">Personnelle</option>
+                  <option value="shared">Commune</option>
+                </select>
+              </label>
+              <label>
+                Fréquence
+                <select
+                  value={recurringForm.frequency}
+                  onChange={(event) =>
+                    setRecurringForm({
+                      ...recurringForm,
+                      frequency: event.target
+                        .value as RecurringForm["frequency"],
+                    })
+                  }
+                >
+                  <option value="weekly">Hebdomadaire</option>
+                  <option value="monthly">Mensuelle</option>
+                  <option value="quarterly">Trimestrielle</option>
+                  <option value="semiannual">Semestrielle</option>
+                  <option value="yearly">Annuelle</option>
+                </select>
+              </label>
+            </div>
+            <div className="form-two">
+              <label>
+                Date de début
+                <input
+                  type="date"
+                  value={recurringForm.startDate}
+                  onChange={(event) =>
+                    setRecurringForm({
+                      ...recurringForm,
+                      startDate: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Date de fin (facultatif)
+                <input
+                  type="date"
+                  value={recurringForm.endDate}
+                  onChange={(event) =>
+                    setRecurringForm({
+                      ...recurringForm,
+                      endDate: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            </div>
+            {recurringForm.frequency !== "weekly" && (
+              <label>
+                Jour d'échéance
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={recurringForm.dueDay}
+                  onChange={(event) =>
+                    setRecurringForm({
+                      ...recurringForm,
+                      dueDay: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            )}
+            {recurringForm.scope === "shared" &&
+              categoryById.get(recurringForm.categoryId)?.is_grocery === true && (
+                <p className="form-hint">
+                  Cette charge commune de courses sera imputée au budget courses.
+                </p>
+              )}
+            {mutationError !== null && (
+              <p className="form-error" role="alert">
+                {mutationError}
+              </p>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="outline-button"
+                onClick={() => setShowAddRecurring(false)}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="add-button"
+                disabled={!online || mutating}
+              >
+                <Check size={16} /> Créer la charge
               </button>
             </div>
           </form>
