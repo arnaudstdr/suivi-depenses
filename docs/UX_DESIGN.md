@@ -57,7 +57,7 @@ Navigation latérale :
 - Historique
 - Paramètres
 
-Un sélecteur de contexte permet de passer de la vue **Foyer** à la vue **Personnel**. Le contexte actif doit rester visible dans l'en-tête.
+Un sélecteur de contexte permet de passer de la vue **Personnel** à la vue **Foyer**. La vue **Personnel est l'écran d'accueil par défaut** après connexion. Le contexte actif doit rester visible dans l'en-tête.
 
 ### Mobile
 
@@ -238,4 +238,4 @@ La maquette est une interface de démonstration navigable, sans authentification
 
 ---
 
-**Fin — UX_DESIGN.md v0.2**
+**Fin — UX_DESIGN.md v0.3**
