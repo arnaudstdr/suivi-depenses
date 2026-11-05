@@ -24,6 +24,7 @@ from app.domains.auth.models import AuthSession
 from app.domains.auth.repository import AuthSessionRepository, InvitationRepository
 from app.domains.households.models import HouseholdMember
 from app.domains.households.repository import HouseholdRepository
+from app.domains.notifications.service import NotificationService
 from app.domains.users.models import User
 from app.domains.users.repository import UserRepository
 
@@ -185,6 +186,22 @@ class AuthService:
                 details={"role": "member"},
                 request_id=request_id_var.get(),
             )
+
+            notification_service = NotificationService(self._db, self._now)
+            for member in self._households.list_members(household.id):
+                if member.role != "owner":
+                    continue
+                notification_service.notify(
+                    user_id=member.user_id,
+                    notification_type="invitation_accepted",
+                    title="Nouveau membre dans le foyer",
+                    body=f"{cleaned_first_name} a rejoint le foyer.",
+                    household_id=household.id,
+                    entity_type="household",
+                    entity_id=household.id,
+                    dedupe_key=f"invitation_accepted:{invitation.id}:{member.user_id}",
+                    commit=False,
+                )
 
             auth_session, raw_session_token = self._create_session(user)
             self._db.commit()

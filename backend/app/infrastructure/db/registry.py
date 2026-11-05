@@ -11,6 +11,8 @@ from app.domains.balances.models import PersonalBalanceEntry
 from app.domains.budgets.models import Budget, BudgetPeriod
 from app.domains.categories.models import Category
 from app.domains.households.models import Household, HouseholdMember
+from app.domains.imports_exports.models import ImportBatch
+from app.domains.notifications.models import Notification, NotificationPreference
 from app.domains.planned.models import PlannedExpense
 from app.domains.recurring.models import RecurringExpense, RecurringOccurrence
 from app.domains.transactions.models import Transaction
@@ -27,7 +29,10 @@ __all__ = [
     "Household",
     "HouseholdContribution",
     "HouseholdMember",
+    "ImportBatch",
     "Invitation",
+    "Notification",
+    "NotificationPreference",
     "PersonalBalanceEntry",
     "PlannedExpense",
     "RecurringExpense",

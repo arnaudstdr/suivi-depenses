@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     cookie_secure: bool | None = None
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
 
+    import_max_bytes: int = 2_000_000
+    import_max_rows: int = 1_000
+    import_preview_ttl_seconds: int = 86_400
+    export_max_rows: int = 10_000
+
     @property
     def database_url_effective(self) -> str:
         """URL SQLAlchemy effective, sans exposer le mot de passe dans les logs."""

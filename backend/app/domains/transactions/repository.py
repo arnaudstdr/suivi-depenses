@@ -112,6 +112,39 @@ class TransactionRepository:
         )
         return items, total
 
+    def duplicate_keys(
+        self,
+        *,
+        user_id: uuid.UUID,
+        household_id: uuid.UUID,
+        scope: str,
+        date_from: date,
+        date_to: date,
+    ) -> set[tuple[date, int, str, uuid.UUID]]:
+        conditions = [
+            Transaction.deleted_at.is_(None),
+            Transaction.scope == scope,
+            Transaction.transaction_type == "expense",
+            Transaction.transaction_date >= date_from,
+            Transaction.transaction_date <= date_to,
+        ]
+        if scope == "personal":
+            conditions.append(Transaction.user_id == user_id)
+        else:
+            conditions.append(Transaction.household_id == household_id)
+        rows = self._db.execute(
+            select(
+                Transaction.transaction_date,
+                Transaction.amount_cents,
+                Transaction.label,
+                Transaction.category_id,
+            ).where(*conditions)
+        ).all()
+        return {
+            (row.transaction_date, row.amount_cents, row.label.strip().casefold(), row.category_id)
+            for row in rows
+        }
+
     def sum_refunds(self, original_transaction_id: uuid.UUID) -> int:
         total = self._db.scalar(
             select(func.coalesce(func.sum(Transaction.amount_cents), 0)).where(

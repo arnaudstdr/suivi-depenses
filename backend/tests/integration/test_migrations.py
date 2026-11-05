@@ -23,6 +23,9 @@ EXPECTED_TABLES = {
     "allocation_rules",
     "allocation_rule_members",
     "household_contributions",
+    "import_batches",
+    "notifications",
+    "notification_preferences",
 }
 
 
