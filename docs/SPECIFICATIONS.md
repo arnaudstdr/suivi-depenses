@@ -1,256 +1,206 @@
-# Spécifications fonctionnelles — Budget familial
+# Spécifications fonctionnelles — Suivi des dépenses
 
-**Version :** 0.2  
-**Statut :** Proposition fonctionnelle à valider  
-**Type :** Application web responsive / PWA
+**Version :** 0.3  
+**Statut :** Base fonctionnelle validée — à implémenter  
+**Application :** Web responsive / PWA  
+**Devise :** EUR
 
-## 1. Vision du produit
+## 1. Objectif
 
-Application web permettant à deux personnes de gérer leurs finances personnelles et le budget familial depuis une interface unique. Elle remplace les tableaux Numbers/Excel actuels et simplifie le suivi des revenus et dépenses, des charges récurrentes, des dépenses ponctuelles, du budget alimentaire partagé, de la répartition des charges, de l'historique et des imports/exports.
+L'application permet à deux membres d'un foyer de suivre leurs dépenses sans mélanger le budget personnel et les dépenses communes.
 
-L'application doit être utilisable sur ordinateur, smartphone et tablette, avec possibilité d'installation comme PWA.
+La priorité de l'écran Personnel est de répondre immédiatement à la question : **combien me reste-t-il de budget prévisionnel à dépenser jusqu'à la fin du mois ?**
 
-## 2. Principes fondamentaux
+L'application ne cherche pas à reproduire la comptabilité de plusieurs comptes bancaires. Le seul solde bancaire suivi en V1 est le compte courant personnel de l'utilisateur connecté.
 
-1. Une dépense doit être enregistrée rapidement.
-2. Les calculs budgétaires doivent être automatiques et explicables.
-3. Les deux utilisateurs possèdent des comptes indépendants.
-4. Les données communes sont synchronisées entre les utilisateurs.
-5. Les données personnelles restent privées selon les autorisations configurées.
-6. Les données historiques ne sont pas recalculées rétroactivement après un changement de configuration.
-7. Les montants sont stockés en centimes entiers.
+## 2. Deux périmètres distincts
 
-## 3. Utilisateurs, foyer et confidentialité
+### 2.1 Suivi personnel
 
-### 3.1 Utilisateurs et foyer
+Le suivi personnel comprend :
+- le solde réel du compte courant personnel, saisi manuellement ;
+- les charges récurrentes personnelles restant à payer ;
+- les dépenses ponctuelles personnelles prévues et non encore payées ;
+- une seule ligne agrégée « Participation au foyer », correspondant à la part de l'utilisateur dans les charges communes prévues et restant à financer.
 
-La première version démarre avec deux utilisateurs, chacun possédant son compte. Ils appartiennent à un même foyer.
+Aucun revenu futur n'est ajouté au calcul. Les revenus ne servent pas à augmenter artificiellement le disponible du mois.
 
-Le foyer centralise les dépenses communes, le budget alimentaire, les charges communes, les revenus du foyer, les règles de répartition et les tableaux de bord communs.
+### 2.2 Suivi du foyer
 
-### 3.2 Périmètres
+Le suivi du foyer comprend :
+- les charges récurrentes communes ;
+- leur répartition entre les deux membres ;
+- la contribution de chaque membre ;
+- le budget courses commun ;
+- les dépenses de courses enregistrées par l'un ou l'autre membre.
 
-Chaque transaction ou budget est personnel ou commun :
-- Personnel : accessible uniquement à son propriétaire.
-- Commun : accessible aux membres autorisés du foyer.
+Le solde bancaire du compte joint n'est pas suivi en V1.
 
-Les deux membres disposent des mêmes droits fonctionnels sur les données communes dans la V1.
+## 3. Calcul du disponible prévisionnel personnel
 
-### 3.3 Confidentialité financière configurable
+Le solde de départ est le solde réel du compte courant personnel saisi manuellement par l'utilisateur. La saisie conserve sa date et son heure.
 
-Chaque utilisateur contrôle individuellement :
-- le partage de son revenu exact ;
-- l'autorisation d'utiliser son revenu pour les calculs de répartition ;
-- le partage de son pourcentage de participation ;
-- le partage des montants qui lui sont attribués.
+Formule :
 
-Configuration initiale recommandée :
-- revenu exact : privé ;
-- utilisation pour la répartition : autorisée ;
-- pourcentage : partagé ;
-- montant réparti : partagé.
+`Disponible prévisionnel = solde personnel saisi - charges personnelles restantes - participation au foyer restante - dépenses personnelles ponctuelles prévues`
 
-Le backend applique les permissions avant de retourner les données. Le masquage dans le frontend ne constitue pas une protection suffisante.
+Règles :
+- Ne pas déduire une dépense déjà payée : son effet est déjà reflété dans le solde bancaire saisi.
+- Une charge récurrente est déduite si son échéance est à venir et qu'elle n'est pas marquée payée.
+- Une dépense ponctuelle prévue est déduite tant qu'elle n'est pas marquée payée.
+- Une participation au foyer déjà transférée/payée n'est pas déduite une seconde fois.
+- Les achats de courses communes ne sont jamais déduits du suivi personnel.
+- Aucun revenu attendu, même certain, n'est ajouté.
+- Le calcul porte sur le reste du mois sélectionné, depuis la date de référence du solde jusqu'à la fin du mois.
+- Le tableau de bord affiche la date de dernière saisie du solde.
 
-Un revenu non autorisé pour le calcul ne doit pas être remplacé par une valeur fictive. Le calcul est déclaré incomplet ou utilise une règle manuelle convenue.
+Le solde manuel est une référence déclarative : l'application ne se connecte pas à la banque et ne le met pas à jour automatiquement.
 
-## 4. Tableau de bord
+## 4. Charges récurrentes
 
-### 4.1 Vue foyer
+L'utilisateur peut créer et gérer toutes ses charges récurrentes, personnelles ou communes.
 
-Afficher les revenus du foyer, dépenses communes, dépenses alimentaires, charges récurrentes, dépenses ponctuelles, budget commun restant et participation financière de chaque membre.
+Champs :
+- libellé ;
+- montant de référence ;
+- catégorie ;
+- type : personnelle ou commune ;
+- fréquence (hebdomadaire, mensuelle, trimestrielle, semestrielle, annuelle) ;
+- date de début et date de fin facultative ;
+- jour/date d'échéance ;
+- statut actif/inactif ;
+- montant fixe ou variable ;
+- pour une charge commune, pourcentage de répartition de chaque membre.
 
-### 4.2 Vue personnelle
+Exemples : abonnements, assurances, loyer, énergie, téléphonie, participation au foyer.
 
-Afficher les revenus personnels, dépenses personnelles, participation aux charges communes, objectifs et enveloppes personnels, et solde prévisionnel.
+### 4.1 Charges personnelles
 
-### 4.3 Navigation temporelle
+Une charge personnelle est déduite à 100 % du disponible personnel lorsqu'elle reste à payer sur le mois.
 
-Le tableau de bord possède un sélecteur de mois. Les périodes historiques restent consultables.
+### 4.2 Charges communes
 
-## 5. Transactions
+Une charge commune est répartie selon les pourcentages configurés. La répartition par défaut actuelle est 55 % pour l'utilisateur et 45 % pour l'autre membre ; elle doit être modifiable.
 
-### 5.1 Types
+La somme des pourcentages doit être égale à 100 %.
 
-- Revenu.
-- Dépense.
-- Remboursement.
-- Transfert entre comptes : à arbitrer, hors périmètre initial si non nécessaire.
+Sur le tableau de bord Personnel, toutes les parts personnelles des charges communes restant à financer sont regroupées dans une seule ligne « Participation au foyer ». Le détail reste consultable dans la vue Charges/Récurrences.
 
-### 5.2 Informations
+Une règle personnalisée peut être définie pour une charge particulière si sa répartition diffère de la répartition par défaut.
 
-Une transaction comporte :
-- libellé, montant positif, date, type, catégorie et périmètre ;
-- utilisateur créateur ;
-- personne ayant payé, si applicable ;
-- moyen de paiement facultatif ;
-- commentaire facultatif.
+## 5. Dépenses ponctuelles
 
-Le type détermine le traitement comptable. Un remboursement est une transaction distincte, pas une modification de la dépense d'origine.
+L'utilisateur peut enregistrer une dépense ponctuelle :
+- personnelle : elle impacte le disponible personnel tant qu'elle est prévue et non payée ;
+- commune hors courses : elle est répartie selon la règle configurée et intégrée à la participation au foyer ;
+- courses communes : elle est imputée au budget courses commun, sans impact sur le disponible personnel.
 
-### 5.3 Actions
+Une dépense ponctuelle peut être prévue, payée ou annulée. Une dépense payée n'est plus une prévision à déduire.
 
-Ajouter, modifier et supprimer une transaction ; filtrer par mois, catégorie, utilisateur et périmètre ; rechercher par libellé ; consulter l'historique.
+## 6. Budget courses commun
 
-### 5.4 Catégories
+- Enveloppe initiale : **490 € par mois**.
+- Budget configurable par le foyer.
+- Répartition de contribution actuelle : 55 % utilisateur / 45 % autre membre.
+- Contribution théorique de l'utilisateur : 269,50 € ; celle de l'autre membre : 220,50 €.
+- Le budget est remis à sa valeur configurée au début de chaque mois.
+- Aucun reliquat n'est reporté.
+- Une dépense de catégorie « Courses / alimentation » marquée commune est déduite de l'enveloppe.
+- La dépense est enregistrée une seule fois.
+- Elle n'est pas ajoutée aux dépenses personnelles et ne diminue pas le disponible personnel.
+- Le tableau de bord affiche l'enveloppe, le montant dépensé et le montant restant.
 
-Catégories initiales : logement, nourriture, transport, santé, assurances, abonnements, loisirs, épargne, enfants et divers. Elles doivent être configurables.
+Le montant de contribution au budget courses est intégré au calcul de la participation au foyer lorsqu'il est configuré comme engagement mensuel à financer. Les achats individuels de courses restent uniquement des consommations de l'enveloppe.
 
-### 5.5 Dépenses communes payées individuellement
+## 7. Enregistrement d'une dépense
 
-Une dépense commune peut être payée par un seul membre. Le paiement réel et la participation théorique calculée sont deux notions distinctes.
+Le formulaire doit rester simple. Champs minimum :
+- libellé ;
+- montant ;
+- date ;
+- catégorie ;
+- type : personnelle ou commune.
 
-La V1 ne crée pas automatiquement de créance ni de remboursement entre membres. La régularisation reste manuelle.
+Si la dépense est commune et concerne les courses, elle diminue le budget courses. Si elle est commune et concerne une autre catégorie, sa part personnelle rejoint la participation au foyer.
 
-## 6. Dépenses récurrentes
+Les dépenses de courses communes ne doivent pas être confondues avec les autres charges communes.
 
-Une dépense récurrente comprend un libellé, montant de référence, catégorie, périmètre, fréquence, date de début et date de fin facultative, jour d'échéance, propriétaire ou foyer, statut actif/inactif et indicateur de confirmation obligatoire du montant.
+## 8. Tableau de bord Personnel
 
-Fréquences initiales : hebdomadaire, mensuelle, trimestrielle, semestrielle et annuelle.
+Ordre de priorité :
+1. **Disponible prévisionnel** (indicateur principal).
+2. Solde personnel saisi et date de mise à jour.
+3. Détail synthétique des déductions : charges personnelles, participation au foyer, dépenses ponctuelles prévues.
+4. Budget courses du foyer : dépensé et restant.
+5. Charges récurrentes à venir.
+6. Dépenses personnelles récentes.
 
-Chaque occurrence concrète peut être en attente de confirmation, confirmée, payée ou ignorée.
+Le tableau de bord ne doit pas afficher les achats communs comme des dépenses personnelles.
 
-Pour une dépense variable, le montant doit être confirmé à chaque échéance avant d'être comptabilisé comme dépense réelle. Une occurrence payée référence une transaction. Une occurrence ignorée n'est pas comptabilisée. Une contrainte d'unicité empêche de générer deux fois la même échéance.
+## 9. Tableau de bord Foyer
 
-Les modifications de la définition ne changent pas les occurrences passées.
+Afficher :
+- liste et total des charges communes ;
+- pourcentage et montant de participation de chaque membre ;
+- total de la participation mensuelle de chacun ;
+- budget courses de 490 €, consommé et restant ;
+- historique des dépenses communes.
 
-## 7. Budget alimentaire partagé
+Aucun solde bancaire joint n'est requis.
 
-Le foyer dispose d'une enveloppe alimentaire commune. Budget de référence initial : 490 € par mois, valeur configurable.
+## 10. Transactions et historique
 
-Les deux membres peuvent ajouter des dépenses alimentaires. Après synchronisation, chaque achat est visible par les deux.
+Chaque dépense conserve son libellé, montant positif en centimes, date, catégorie, périmètre, créateur et statut. Les remboursements sont des transactions distinctes liées à la dépense d'origine. L'historique ne doit pas être modifié silencieusement.
 
-Afficher le budget initial, montant dépensé, montant restant, pourcentage consommé, barre de progression, historique des achats, date, montant et auteur de chaque achat.
+## 11. Récurrences et occurrences
 
-Calcul : budget restant = enveloppe du mois − dépenses alimentaires éligibles.
+Les récurrences génèrent des échéances de manière idempotente. Chaque occurrence peut être à payer, confirmée, payée ou ignorée. Les montants variables peuvent être confirmés à chaque échéance. Une occurrence payée référence la transaction correspondante.
 
-Les achats sont enregistrés une seule fois dans les transactions ; le budget alimentaire agrège les transactions éligibles et ne crée pas une seconde dépense.
+## 12. Répartition
 
-Seuils d'alerte configurables, proposés par défaut à 70 %, 85 % et 100 % de consommation.
+Répartition par défaut : 55 % / 45 %. Chaque charge commune peut utiliser la répartition par défaut ou une règle spécifique. Les calculs sont effectués au centime, avec arrondi déterministe. Une modification de la règle ne réécrit pas les périodes passées.
 
-Aucun report : chaque mois démarre avec sa propre enveloppe. Le reliquat non consommé du mois précédent est perdu.
+Les revenus peuvent être conservés comme informations de référence pour expliquer ou ajuster manuellement les pourcentages, mais ils ne sont pas utilisés pour calculer le disponible prévisionnel personnel.
 
-## 8. Répartition des charges communes
+## 13. Comptes, sécurité et confidentialité
 
-### 8.1 Répartition proportionnelle
+- Deux comptes utilisateurs distincts rattachés au même foyer.
+- Invitation uniquement en V1, pas d'inscription publique.
+- Données personnelles accessibles uniquement à leur propriétaire.
+- Données du foyer accessibles aux membres.
+- Permissions vérifiées côté backend.
+- Sessions par cookies sécurisés HttpOnly, Secure, SameSite adapté et protection CSRF.
+- Montants stockés en centimes entiers.
+- Journalisation des opérations sensibles sans données financières privées inutiles.
 
-La méthode par défaut calcule la participation à partir des revenus admissibles de chaque membre.
+## 14. PWA et mode hors ligne
 
-Exemple :
-- Anne : 1 800 € ;
-- Arnaud : 2 200 € ;
-- total admissible : 4 000 € ;
-- proportions : 45 % et 55 %.
+La PWA permet l'installation sur mobile et desktop. En V1, les données déjà synchronisées sont consultables hors ligne en lecture seule. Aucune création ou modification hors ligne.
 
-Les calculs sont effectués au centime. Le reliquat d'arrondi est attribué de manière déterministe pour que la somme soit égale au total.
+## 15. Hors périmètre V1
 
-### 8.2 Règles personnalisées
+- Synchronisation bancaire automatique.
+- Suivi du solde du compte joint.
+- Ajout des revenus futurs au disponible prévisionnel.
+- Déduction des achats de courses communes du budget personnel.
+- Gestion de plusieurs comptes personnels.
+- Reconnaissance automatique de tickets par OCR.
+- Catégorisation par IA.
 
-Certaines charges, notamment les crédits, peuvent utiliser des proportions spécifiques.
+## 16. Critères d'acceptation
 
-Exemple :
-- loyer : Anne 45 %, Arnaud 55 % ;
-- crèche : Anne 45 %, Arnaud 55 % ;
-- crédit voiture : Anne 0 %, Arnaud 100 %.
+- Le tableau de bord affiche le disponible prévisionnel en premier.
+- Le solde de départ est saisi manuellement et horodaté.
+- Les revenus futurs ne sont pas ajoutés au disponible.
+- Les charges récurrentes personnelles restant à payer sont déduites.
+- Les parts de charges communes restant à financer sont agrégées dans une seule ligne.
+- Une charge commune payée ou déjà transférée n'est pas déduite deux fois.
+- Une dépense de courses commune diminue le budget courses, pas le disponible personnel.
+- Le budget courses est initialisé à 490 €/mois et configurable.
+- La répartition par défaut est 55/45 et modifiable.
+- Les dépenses ponctuelles personnelles prévues sont déduites jusqu'à leur paiement.
+- Les montants sont calculés au centime.
 
-Une règle personnalisée doit totaliser 100 %.
+---
 
-### 8.3 CAF et autres aides
-
-Les aides CAF sont enregistrées comme revenus du foyer, et non comme revenus personnels par défaut.
-
-Leur inclusion dans la base de calcul des proportions doit rester configurable par type de revenu ou règle de calcul. Il ne faut pas supposer que toute aide est automatiquement incluse dans le calcul des participations.
-
-### 8.4 Historique
-
-Chaque période conserve les revenus admissibles, proportions et montants calculés. Une modification des revenus ou règles ne recalcule pas silencieusement les mois précédents.
-
-## 9. Budgets personnels
-
-Chaque utilisateur peut définir ses enveloppes et objectifs personnels, et suivre ses revenus et dépenses privés. Les informations personnelles ne sont pas visibles par l'autre membre sauf autorisation explicite.
-
-## 10. Historique et statistiques
-
-Conserver les transactions et configurations mensuelles.
-
-Comparer les dépenses totales, alimentation, charges fixes, dépenses ponctuelles, revenus et épargne.
-
-Visualisations envisagées : évolution des dépenses sur 12 mois, répartition par catégorie, dépenses personnelles contre communes, évolution du budget alimentaire, évolution des revenus et dépenses.
-
-## 11. Import et export
-
-### 11.1 Import CSV/XLSX
-
-Étapes : sélection du fichier, lecture des colonnes, association des colonnes aux champs, prévisualisation, détection des doublons, validation et import.
-
-Aucune donnée ne doit être importée sans validation préalable.
-
-### 11.2 Export
-
-Formats CSV et XLSX pour les transactions, dépenses récurrentes, budgets, répartitions et historiques. Les exports respectent les permissions de l'utilisateur.
-
-## 12. Notifications
-
-Notifications dans l'application et push PWA lorsque le navigateur et le système le permettent.
-
-Types : budget alimentaire proche du seuil, budget alimentaire dépassé, dépense récurrente à confirmer, nouvelle dépense commune et dépense commune modifiée.
-
-Chaque utilisateur peut configurer ses préférences par catégorie et canal.
-
-## 13. PWA et fonctionnement hors ligne
-
-L'application doit être installable sur iPhone, Android, macOS et Windows, dans les limites des capacités du navigateur.
-
-Mode hors ligne :
-- consultation des données déjà mises en cache ;
-- consultation du dernier tableau de bord chargé ;
-- consultation des dernières transactions synchronisées ;
-- aucune création ni modification hors ligne en V1 ;
-- indication claire de l'état de connexion.
-
-Le cache doit être limité aux données auxquelles l'utilisateur a accès.
-
-## 14. Sécurité
-
-Authentification sécurisée et mots de passe hachés ; gestion des sessions ; contrôle d'accès côté backend ; isolation des données personnelles ; HTTPS obligatoire en production ; sauvegardes PostgreSQL régulières ; journalisation des actions sensibles ; aucune donnée financière privée inutile dans les logs.
-
-## 15. Stack cible
-
-- Python 3.12.
-- FastAPI et Pydantic.
-- SQLAlchemy 2 et Alembic.
-- PostgreSQL.
-- React, TypeScript et Vite.
-- Tailwind CSS et shadcn/ui.
-- vite-plugin-pwa.
-- Docker Compose.
-
-## 16. Périmètre MVP
-
-Inclus : deux comptes et un foyer ; transactions personnelles et communes ; catégories ; dépenses récurrentes ; budget alimentaire partagé ; répartition proportionnelle et règles personnalisées ; budgets personnels ; tableau de bord ; historique mensuel ; import CSV/XLSX ; export CSV/XLSX ; notifications ; PWA avec consultation hors ligne.
-
-Hors périmètre initial : connexion bancaire automatique ; OCR de tickets ; catégorisation par IA ; gestion de plusieurs devises ; synchronisation bancaire temps réel.
-
-## 17. Critères d'acceptation
-
-- Deux utilisateurs peuvent se connecter séparément.
-- Une dépense personnelle reste privée.
-- Une dépense commune est visible par les membres du foyer.
-- Une dépense alimentaire diminue l'enveloppe après synchronisation.
-- Les dépenses récurrentes ne sont pas générées en double.
-- Une occurrence variable nécessite confirmation avant comptabilisation.
-- Les répartitions sont exactes au centime.
-- Les changements de revenus ne modifient pas les mois précédents.
-- Les budgets ne sont pas reportés.
-- Les remboursements sont des transactions distinctes.
-- Imports et exports respectent les permissions.
-- Les dernières données synchronisées sont consultables hors ligne.
-
-## 18. Points encore à arbitrer
-
-- Règle exacte d'inclusion des différentes aides dans la base de répartition.
-- Définition du solde disponible personnel.
-- Gestion des transferts entre comptes.
-- Gestion des revenus variables et des périodes sans revenu.
-- Gestion des dépenses partiellement remboursées.
-- Règles d'arrondi et d'affichage des répartitions historiques.
+**Fin — SPECIFICATIONS.md v0.3**
