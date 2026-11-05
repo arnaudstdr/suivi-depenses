@@ -1,6 +1,6 @@
 # Spécification API REST — Suivi des dépenses
 
-**Version :** 0.3  
+**Version :** 0.4  
 **Statut :** Contrat conceptuel aligné sur les règles métier  
 **Base URL :** `/api/v1`  
 **Backend :** FastAPI / Pydantic v2
@@ -34,6 +34,8 @@ Sessions par cookie HttpOnly, Secure, SameSite adapté et protection CSRF. La cr
 | PUT | `/users/me/personal-balance` | Enregistrer une nouvelle saisie |
 | GET | `/users/me/personal-balance/history` | Historique des saisies |
 
+Le solde saisi est un instantané daté. Les sorties payées après `recorded_at` restent déduites du disponible jusqu'à la prochaine saisie de solde ; les sorties déjà passées avant cet instantané sont exclues.
+
 Exemple PUT :
 
 ```json
@@ -64,6 +66,7 @@ Exemple de réponse :
   "deductions": {
     "personal_recurring_remaining_cents": 25000,
     "household_contribution_remaining_cents": 30000,
+    "household_contribution_status": "pending",
     "personal_planned_remaining_cents": 10000
   },
   "available_forecast_cents": 85000,
@@ -75,9 +78,18 @@ Exemple de réponse :
 }
 ```
 
-Les déductions sont uniquement les charges à venir et non payées. Les revenus futurs et les dépenses de courses communes sont exclus du disponible personnel. La ligne household_contribution est agrégée ; le détail est disponible dans les vues charges.
+Les déductions couvrent les engagements non payés et les sorties payées après le dernier instantané de solde. Les revenus futurs et les achats de courses communes sont exclus du disponible personnel. La ligne household_contribution est agrégée ; elle inclut la contribution au budget courses et le détail est disponible dans les vues charges.
 
-## 5. Transactions
+## 5. Participation au foyer
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/households/{household_id}/contributions?period=YYYY-MM` | Lire la participation du membre pour la période |
+| POST | `/households/{household_id}/contributions/{contribution_id}/mark-transferred` | Confirmer que le virement a été effectué |
+
+La contribution mensuelle agrège la part du membre dans les charges communes et sa contribution au budget courses. Le statut passe de `pending` à `transferred` avec `transferred_at`. Cette action ne modifie pas à elle seule le disponible : si le virement est postérieur au dernier instantané de solde, son montant reste déduit. Une nouvelle saisie du solde après le virement l'intègre et supprime alors la déduction, sans double comptage.
+
+## 6. Transactions
 
 | Méthode | Route | Description |
 |---|---|---|
@@ -109,7 +121,7 @@ Règles :
 - Une transaction payée n'est plus déduite comme prévision.
 - Le serveur déduit l'identité du créateur de la session.
 
-## 6. Charges récurrentes
+## 7. Charges récurrentes
 
 | Méthode | Route | Description |
 |---|---|---|
@@ -124,7 +136,7 @@ Champs de création : `label`, `amount_cents`, `category_id`, `scope` (personal/
 
 Une charge commune est répartie selon les pourcentages configurés. La part de l'utilisateur connecté est agrégée avec les autres charges communes dans la ligne « Participation au foyer » du tableau de bord personnel. Les détails par charge sont accessibles dans l'écran Charges.
 
-## 7. Dépenses ponctuelles prévues
+## 8. Dépenses ponctuelles prévues
 
 | Méthode | Route | Description |
 |---|---|---|
@@ -134,9 +146,9 @@ Une charge commune est répartie selon les pourcentages configurés. La part de 
 | POST | `/planned-expenses/{id}/mark-paid` | Marquer payée |
 | DELETE | `/planned-expenses/{id}` | Annuler |
 
-Une dépense personnelle prévue est déduite du disponible jusqu'à son paiement. Une dépense commune hors courses est répartie et agrégée dans la participation au foyer. Une dépense commune de courses consomme uniquement le budget courses.
+Une dépense personnelle prévue ou engagée est déduite. Si elle est payée après le dernier instantané de solde, elle reste déduite jusqu'à la prochaine saisie du solde ; si elle est payée avant l'instantané, elle est exclue. Une dépense commune hors courses est répartie et agrégée dans la participation au foyer. Une dépense commune de courses consomme uniquement le budget courses.
 
-## 8. Budget courses du foyer
+## 9. Budget courses du foyer
 
 | Méthode | Route | Description |
 |---|---|---|
@@ -148,7 +160,7 @@ Valeur initiale : 49 000 centimes par mois. Répartition de contribution de réf
 
 Une transaction commune de catégorie courses diminue le budget restant d'une seule fois. Elle n'est jamais incluse dans les dépenses personnelles ni dans la déduction personnelle du disponible.
 
-## 9. Répartition
+## 10. Répartition
 
 | Méthode | Route | Description |
 |---|---|---|
@@ -158,7 +170,7 @@ Une transaction commune de catégorie courses diminue le budget restant d'une se
 
 Chaque règle contient un pourcentage par membre et doit totaliser exactement 100 %. Les règles spécifiques priment sur la règle par défaut. Les changements s'appliquent aux échéances futures, sans recalcul silencieux de l'historique.
 
-## 10. Réponses et erreurs
+## 11. Réponses et erreurs
 
 Les ressources retournées ne contiennent que les champs autorisés. Utiliser des codes HTTP standards (200, 201, 204, 400, 401, 403, 404, 409, 422, 500) et un corps d'erreur stable avec `code`, `message`, `details` et `request_id`.
 
