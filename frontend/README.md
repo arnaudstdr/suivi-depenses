@@ -35,6 +35,30 @@ développement et en prévisualisation.
 - Aucune réponse `/api/v1` n'est mise en cache par le service worker.
 - Les icônes sont générées par `python3 scripts/generate-icons.py`.
 
+## Déploiement Docker
+
+Le frontend est construit dans une image multi-étapes puis servi par Nginx.
+
+```bash
+# Depuis la racine du dépôt
+make build
+make up
+make down
+```
+
+Nginx sert les fichiers statiques, applique le fallback SPA, ajoute les en-têtes
+de sécurité et proxifie `/api/` et `/health/` vers le service `api`.
+
+Le conteneur écoute sur `127.0.0.1:${FRONTEND_PORT:-8080}:80`. Sur le Raspberry
+Pi, Tailscale Serve expose ce port sur le tailnet en HTTPS :
+
+```bash
+sudo tailscale serve --bg 8080
+sudo tailscale serve status
+```
+
+Caddy n'est pas requis dans ce premier déploiement.
+
 ## Tests
 
 `npm run test` exécute Vitest :

@@ -210,7 +210,8 @@ Créer des tests unitaires dédiés à ces cas, y compris les paiements juste av
 - Le socle sécurisé est implémenté : bootstrap CLI, sessions opaques, cookies sécurisés, CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et audit.
 - Les Phases 4 à 7 sont implémentées : solde, catégories, transactions, remboursements, budget courses, dépenses prévues, récurrences, génération automatique et idempotente des occurrences, confirmation des montants variables, skip motivé, corrections auditées, répartition, participation, contribution au foyer, historique des contributions, calcul du disponible prévisionnel, dashboard personnel, export CSV/XLSX, import avec prévisualisation, notifications in-app, frontend connecté, PWA installable, cache privé et lecture hors ligne en lecture seule.
 - Le frontend possède les scripts npm `dev`, `build`, `preview`, `typecheck` et `test`; il n'existe pas encore de script `lint` déclaré dans son `package.json`.
+- Le frontend est conteneurisé dans une image Nginx qui sert le build React et proxifie `/api` et `/health` vers FastAPI. L'accès distant du Raspberry Pi passe par Tailscale Serve, sans Caddy dans le premier déploiement.
 - Les commandes backend réellement disponibles sont documentées dans `backend/README.md` et dans le `Makefile`.
-- La prochaine phase est la Phase 8 : déploiement ARM64, Caddy, sauvegardes et tests de restauration.
+- La Phase 8 est en cours : le déploiement Docker ARM64 et l'accès Tailscale sont en place ; restent les sauvegardes, Sentry filtré et les tests de restauration.
 
 Cette section doit être mise à jour lorsque l'architecture réelle du dépôt évolue. Ne pas créer des fichiers ou commandes manquants en supposant qu'ils existent.

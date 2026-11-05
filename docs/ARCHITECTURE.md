@@ -61,7 +61,7 @@ Le navigateur charge le frontend depuis le même domaine que l'API. Caddy route 
 | PWA | vite-plugin-pwa | Manifest, service worker et cache |
 | Tâches asynchrones | Celery | Traitements longs et planifiés |
 | Broker / cache court | Redis | File de tâches et coordination |
-| Reverse proxy | Caddy | HTTPS et routage |
+| Accès distant | Tailscale Serve (V1), Caddy optionnel | HTTPS et exposition au tailnet |
 | Conteneurs | Docker Compose | Environnement local et déploiement |
 | Tests backend | pytest | Tests unitaires et intégration |
 | Tests frontend | Vitest + Testing Library | Tests composants et logique |
@@ -306,13 +306,15 @@ Environnement Docker Compose cible :
 
 | Service | Rôle | Exposition |
 |---|---|---|
-| `caddy` | HTTPS et reverse proxy | Public, ports 80/443 |
-| `frontend` | Build statique React servi par Caddy | Interne |
-| `api` | FastAPI | Réseau Docker interne |
-| `worker` | Worker Celery | Réseau Docker interne |
-| `scheduler` | Celery Beat | Réseau Docker interne |
+| `frontend` | Build React servi par Nginx, proxy `/api` et `/health` | `127.0.0.1:8080` sur l'hôte |
+| `api` | FastAPI | Réseau Docker interne et `127.0.0.1:8000` local |
 | `postgres` | Base de données | Réseau Docker interne uniquement |
-| `redis` | Broker Celery | Réseau Docker interne uniquement |
+| Tailscale Serve | HTTPS et accès au tailnet | Tailnet, sans exposition publique par défaut |
+
+Caddy n'est pas utilisé dans le premier déploiement. Tailscale Serve expose le
+frontend Nginx en HTTPS sur le tailnet. Caddy reste une option si un accès
+public classique devient nécessaire. Les workers Celery, le scheduler et Redis
+ne sont pas activés en V1.
 
 Les conteneurs applicatifs ne tournent pas en root lorsque cela est possible. Les secrets sont fournis par variables d'environnement ou fichiers secrets, jamais commités. Les volumes PostgreSQL et les sauvegardes sont persistants.
 

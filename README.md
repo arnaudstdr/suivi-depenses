@@ -34,7 +34,7 @@ Les achats enregistrés comme courses communes diminuent uniquement l'enveloppe 
 
 ## État du projet
 
-La conception fonctionnelle et la maquette UX sont validées. Le socle backend est en place : FastAPI, SQLAlchemy 2, Alembic, PostgreSQL, endpoints de santé, tests et CI. Le frontend actuel reste une maquette avec données fictives et ne consomme pas encore l'API.
+La conception fonctionnelle et la maquette UX sont validées. Le socle backend est en place : FastAPI, SQLAlchemy 2, Alembic, PostgreSQL, endpoints de santé, tests et CI. Le frontend React/Vite est connecté à l'API, installable en PWA et consultable hors ligne en lecture seule.
 
 Le socle sécurisé est également en place : bootstrap du foyer par CLI, sessions opaques, cookies sécurisés, protection CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et journal d'audit.
 
@@ -50,6 +50,42 @@ Les Phases 4 à 7 sont implémentées : solde personnel historisé, catégories,
 - [Roadmap](docs/ROADMAP.md)
 - [Design UX](docs/UX_DESIGN.md)
 
+## Déploiement Docker
+
+Depuis la racine du dépôt :
+
+```bash
+make build   # construit les images de l'API et du frontend
+make up      # build, migrations Alembic, PostgreSQL, API et frontend
+make down    # arrête les conteneurs sans supprimer le volume PostgreSQL
+```
+
+Le frontend est servi par Nginx, qui proxifie `/api` vers FastAPI. Sur le
+Raspberry Pi, copier `.env.example` vers `.env`, puis définir au minimum
+`APP_ENV=prod` et un `POSTGRES_PASSWORD` fort. Le volume PostgreSQL est conservé
+par `make down` ; les données ne sont pas supprimées.
+
+### Accès via Tailscale
+
+Caddy n'est pas utilisé dans ce premier déploiement. Le frontend écoute
+uniquement sur `127.0.0.1:8080` et Tailscale Serve fournit le HTTPS et l'accès
+au tailnet :
+
+```bash
+sudo tailscale serve --bg 8080
+sudo tailscale serve status
+```
+
+L'application est ensuite accessible à l'adresse HTTPS du Raspberry Pi sur le
+tailnet (`https://<machine>.<tailnet>.ts.net`). Pour révoquer l'exposition :
+
+```bash
+sudo tailscale serve reset
+```
+
+Pour un accès public, `tailscale funnel` peut être utilisé à la place de
+`tailscale serve`, mais ce n'est pas le mode retenu par défaut.
+
 ## Prochaine étape
 
-Démarrer la Phase 8 : déploiement ARM64 sur Raspberry Pi 5 avec Caddy, sauvegardes, Sentry filtré et tests de restauration. Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md), et les commandes frontend dans [`frontend/README.md`](frontend/README.md).
+Poursuivre la Phase 8 : le déploiement Docker ARM64 et l'accès Tailscale sont en place ; restent les sauvegardes, Sentry filtré et les tests de restauration. Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md), et les commandes frontend dans [`frontend/README.md`](frontend/README.md).

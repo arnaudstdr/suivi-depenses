@@ -43,10 +43,20 @@ cd backend
 uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Alternative conteneurisée (PostgreSQL + API) :
+Alternative conteneurisée (PostgreSQL + API + frontend Nginx) :
 
 ```bash
-docker compose --profile docker up -d --build api
+make build   # depuis la racine du dépôt
+make up      # build, migrations Alembic, PostgreSQL, API et frontend
+make down    # arrêt sans suppression du volume PostgreSQL
+```
+
+Équivalent manuel :
+
+```bash
+docker compose --profile docker build api frontend
+docker compose --profile docker run --rm api alembic upgrade head
+docker compose --profile docker up -d api frontend
 ```
 
 Endpoints disponibles :
