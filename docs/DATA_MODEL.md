@@ -30,7 +30,7 @@
 | Budget courses | budgets, budget_periods |
 | Répartition | allocation_rules, allocation_rule_members |
 | Historique | audit_logs |
-| Fonctions annexes | notifications, notification_preferences, import_batches, export_jobs |
+| Fonctions annexes | notifications, notification_preferences, import_batches |
 
 Les revenus de référence ne participent pas au calcul du disponible prévisionnel. Ils pourront être ajoutés ultérieurement si un besoin concret le justifie.
 
@@ -369,3 +369,61 @@ Les opérations financières sensibles sont auditées : création/modification/s
 - Déduction d'une dépense courses commune du budget de 490 €.
 - Absence de double comptage lors du paiement d'une charge.
 - Arrondis au centime.
+
+## 17. import_batches
+
+Prévisualisation et résultat d'un import de transactions. Aucun fichier brut n'est conservé.
+
+| Champ | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| household_id | UUID | FK households, NOT NULL |
+| created_by_user_id | UUID | FK users, NOT NULL, seul propriétaire du lot |
+| target_type | VARCHAR(30) | `transactions` |
+| scope | VARCHAR(20) | personal / shared |
+| original_filename | VARCHAR(255) nullable | nom nettoyé, jamais utilisé comme chemin |
+| source_format | VARCHAR(10) | csv / xlsx |
+| content_type | VARCHAR(100) nullable | type MIME déclaré |
+| checksum | VARCHAR(64) nullable | SHA-256 du fichier |
+| status | VARCHAR(20) | preview / validated / cancelled |
+| total_rows / valid_rows / duplicate_rows / error_rows | SMALLINT | compteurs non négatifs |
+| preview | JSONB | lignes normalisées et statut par ligne |
+| result | JSONB nullable | compteurs d'insertion et de rejet |
+| expires_at | TIMESTAMPTZ | expiration de la prévisualisation |
+| validated_at | TIMESTAMPTZ nullable | instant de validation |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+La validation est atomique et idempotente : un lot déjà validé renvoie son résultat sans réinsérer. Les doublons sont détectés sur `(date, montant, libellé, catégorie)` dans le périmètre ciblé et peuvent être ignorés ou importés explicitement.
+
+## 18. notifications et notification_preferences
+
+Notifications in-app persistées par destinataire.
+
+| Champ notifications | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| user_id | UUID | FK users, destinataire |
+| household_id | UUID nullable | FK households |
+| type | VARCHAR(50) | type métier |
+| title / body | VARCHAR(200) / TEXT | contenu sans montant privé inutile |
+| entity_type / entity_id | VARCHAR(50) / UUID nullable | ressource liée |
+| dedupe_key | VARCHAR(200) nullable | idempotence par utilisateur |
+| read_at | TIMESTAMPTZ nullable | NULL = non lue |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+Contrainte UNIQUE `(user_id, dedupe_key)`. Les valeurs NULL restent autorisées pour les notifications sans clé d'idempotence.
+
+| Champ notification_preferences | Type | Règle |
+|---|---|---|
+| id | UUID | PK |
+| user_id | UUID | FK users |
+| type | VARCHAR(50) | type métier |
+| in_app_enabled | BOOLEAN | true par défaut |
+| push_enabled | BOOLEAN | false par défaut, réservé au Web Push futur |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL |
+
+Contrainte UNIQUE `(user_id, type)`. Une préférence absente équivaut aux valeurs par défaut.
+
+## 19. Export
+
+Les exports V1 sont générés synchroneusement et ne créent pas de ligne `export_jobs`. La limite `export_max_rows` protège la mémoire. Les fichiers respectent les permissions de lecture et sont renvoyés avec `Cache-Control: no-store`. Si un traitement asynchrone devient nécessaire, une table `export_jobs` pourra être ajoutée sans modifier les contrats actuels.

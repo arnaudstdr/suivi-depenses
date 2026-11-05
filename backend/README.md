@@ -267,6 +267,43 @@ Règles principales :
 - Une contribution d'une période passée déjà matérialisée est figée : une
   modification de règle ne réécrit pas l'historique.
 
+## Phase 6 — import/export et notifications
+
+La migration `0007_imports_notifications` ajoute `import_batches`,
+`notifications` et `notification_preferences`.
+
+Dépendances ajoutées : `python-multipart` (upload) et `openpyxl` (XLSX).
+
+Endpoints ajoutés :
+
+- `GET /api/v1/exports/transactions?format=csv|xlsx&scope=...`
+- `GET /api/v1/exports/contributions?format=csv|xlsx`
+- `POST /api/v1/imports/transactions/preview`
+- `GET /api/v1/imports/{batch_id}`
+- `POST /api/v1/imports/{batch_id}/validate`
+- `POST /api/v1/imports/{batch_id}/cancel`
+- `GET /api/v1/notifications`
+- `GET /api/v1/notifications/unread-count`
+- `POST /api/v1/notifications/{id}/read`
+- `POST /api/v1/notifications/read-all`
+- `GET/PUT /api/v1/notifications/preferences`
+
+Règles principales :
+
+- Les exports sont synchrones, filtrés par les permissions de lecture et
+  renvoyés en `no-store`. La limite `EXPORT_MAX_ROWS` vaut 10 000 par défaut.
+- L'import accepte CSV et XLSX, avec les colonnes `date`, `label`, `amount`,
+  `category` et `notes` facultatif. Aucun fichier brut n'est conservé.
+- La prévisualisation classe chaque ligne en `valid`, `duplicate` ou `error`.
+  La validation est atomique et idempotente ; les doublons sont ignorés par
+  défaut et peuvent être importés explicitement.
+- Limites configurables : `IMPORT_MAX_BYTES` (2 Mo), `IMPORT_MAX_ROWS` (1 000)
+  et `IMPORT_PREVIEW_TTL_SECONDS` (24 h).
+- Les notifications in-app sont filtrées par destinataire. Les types
+  `invitation_accepted` et `import_completed` sont créés automatiquement.
+- Les préférences sont propres à chaque utilisateur et à chaque type. Le Web
+  Push est différé ; `push_enabled` est conservé pour la suite.
+
 ## Contrôles
 
 ```bash

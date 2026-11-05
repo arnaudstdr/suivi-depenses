@@ -38,7 +38,7 @@ La conception fonctionnelle et la maquette UX sont validées. Le socle backend e
 
 Le socle sécurisé est également en place : bootstrap du foyer par CLI, sessions opaques, cookies sécurisés, protection CSRF, invitations à usage unique, contrôle d'accès propriétaire/membre et journal d'audit.
 
-Les Phases 4 et 5 sont implémentées : solde personnel historisé, catégories, transactions personnelles/communes/courses, remboursements liés, budget courses mensuel de 490 € sans report, dépenses ponctuelles prévues/engagées, charges récurrentes, génération idempotente et automatique des occurrences, confirmation des montants variables, skip motivé, pointage avec transaction liée, corrections explicites et auditées, répartition 55/45 et règles spécifiques, participation au foyer, contribution au budget courses, calcul du disponible prévisionnel, tableau de bord personnel et historique des contributions.
+Les Phases 4 à 6 sont implémentées : solde personnel historisé, catégories, transactions personnelles/communes/courses, remboursements liés, budget courses mensuel de 490 € sans report, dépenses ponctuelles prévues/engagées, charges récurrentes, génération idempotente et automatique des occurrences, confirmation des montants variables, skip motivé, pointage avec transaction liée, corrections explicites et auditées, répartition 55/45 et règles spécifiques, participation au foyer, contribution au budget courses, calcul du disponible prévisionnel, tableau de bord personnel, historique des contributions, export CSV/XLSX, import avec prévisualisation et notifications in-app.
 
 ## Documentation
 
@@ -52,4 +52,4 @@ Les Phases 4 et 5 sont implémentées : solde personnel historisé, catégories,
 
 ## Prochaine étape
 
-Démarrer la Phase 6 : import CSV/XLSX avec prévisualisation, export respectant les permissions et notifications. Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md).
+Démarrer la Phase 7 : PWA, cache privé, lecture hors ligne en lecture seule et tests de sécurité. Les commandes backend, le bootstrap et le parcours d'invitation sont documentés dans [`backend/README.md`](backend/README.md).

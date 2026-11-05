@@ -280,6 +280,8 @@ Les fichiers téléversés sont stockés temporairement dans un volume non publi
 
 Le stockage objet externe n'est pas requis en V1 ; un volume Docker privé suffit.
 
+Implémentation V1 retenue : l'import est traité en mémoire avec des limites strictes, sans conserver le fichier brut. La prévisualisation normalisée est persistée dans `import_batches` avec une expiration, puis validée atomiquement. L'export est synchrone et respecte les permissions ; aucune table `export_jobs` n'est nécessaire tant que les volumes restent bornés.
+
 ## 11. Notifications
 
 Les notifications in-app sont persistées dans PostgreSQL. Les notifications push utilisent Web Push lorsque le navigateur et le système le permettent.
@@ -291,6 +293,8 @@ Les notifications in-app sont persistées dans PostgreSQL. Les notifications pus
 - Les notifications ne contiennent pas de montants ou détails privés non autorisés.
 
 Le push est best-effort ; l'application ne doit pas dépendre de sa livraison pour fonctionner.
+
+Implémentation V1 : notifications in-app persistées et préférences par utilisateur/type. Le Web Push est différé ; `push_enabled` est conservé pour la compatibilité future mais aucun envoi n'est effectué.
 
 ## 12. Déploiement
 

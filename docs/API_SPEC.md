@@ -258,3 +258,57 @@ Ces routes sont hors du préfixe `/api/v1` et ne révèlent aucune information d
 
 `/health/live` renvoie `200 {"status": "ok"}`. `/health/ready` renvoie `200 {"status": "ok"}` lorsque la base répond, sinon `503 {"status": "unavailable"}`.
 
+## 13. Exports
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/exports/transactions?format=csv\|xlsx&scope=all\|personal\|shared&date_from=...&date_to=...` | Exporter les transactions accessibles |
+| GET | `/exports/contributions?format=csv\|xlsx&date_from=YYYY-MM&date_to=YYYY-MM` | Exporter l'historique des contributions |
+
+Les exports sont synchrones en V1 : aucun traitement asynchrone ni table `export_jobs` n'est nécessaire tant que les volumes restent sous la limite configurée. La réponse est privée, en `Cache-Control: no-store`, avec `Content-Disposition: attachment`.
+
+Permissions :
+
+- un export personnel ne contient que les transactions personnelles de l'utilisateur connecté ;
+- un export commun contient uniquement les transactions communes du foyer ;
+- `scope=all` agrège les deux périmètres accessibles ;
+- un export de contributions contient les contributions du foyer, sans donnée personnelle d'un autre foyer.
+
+La limite `export_max_rows` (10 000 par défaut) protège la mémoire ; au-delà, la réponse est `422 export_too_large`. Les cellules texte sont neutralisées contre l'injection de formules dans les tableurs.
+
+## 14. Imports
+
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/imports/transactions/preview` | Téléverser un CSV/XLSX et obtenir une prévisualisation |
+| GET | `/imports/{batch_id}` | Relire une prévisualisation ou son résultat |
+| POST | `/imports/{batch_id}/validate` | Valider l'import de façon atomique |
+| POST | `/imports/{batch_id}/cancel` | Annuler une prévisualisation |
+
+Le téléversement est un `multipart/form-data` avec un champ `file` et un champ `scope` (`personal` ou `shared`). Formats acceptés : `.csv` et `.xlsx`. Colonnes obligatoires : `date`, `label`, `amount`, `category`. Colonne facultative : `notes`. Les colonnes supplémentaires sont ignorées.
+
+- `date` accepte `YYYY-MM-DD` ou `JJ/MM/AAAA`.
+- `amount` est un montant en euros, positif, avec au maximum deux décimales ; la conversion en centimes est exacte.
+- `category` est résolu par nom parmi les catégories actives accessibles au foyer.
+- Le fichier est limité par `import_max_bytes` (2 Mo par défaut) et `import_max_rows` (1 000 par défaut).
+- Aucun fichier brut n'est conservé : la prévisualisation normalisée est stockée dans `import_batches.preview`, avec une expiration (`import_preview_ttl_seconds`, 24 h par défaut).
+
+La prévisualisation ne crée aucune transaction. Chaque ligne est classée `valid`, `duplicate` ou `error` avec ses motifs. Un doublon est détecté sur `(date, montant, libellé insensible à la casse, catégorie)` dans le périmètre ciblé.
+
+`POST /imports/{batch_id}/validate` accepte `duplicate_policy` (`skip` par défaut, ou `import`). Toutes les lignes valides sont insérées dans une seule transaction SQL ; les lignes en erreur sont ignorées et comptées. Une validation déjà effectuée renvoie le résultat existant sans réinsérer. Si une insertion échoue, aucune ligne du lot n'est conservée. L'import est audité par compteurs, sans contenu financier détaillé.
+
+## 15. Notifications in-app
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/notifications?unread_only=false` | Lister ses notifications |
+| GET | `/notifications/unread-count` | Compter les non lues |
+| POST | `/notifications/{id}/read` | Marquer une notification lue |
+| POST | `/notifications/read-all` | Marquer toutes les notifications lues |
+| GET | `/notifications/preferences` | Lire ses préférences par type |
+| PUT | `/notifications/preferences` | Mettre à jour ses préférences |
+
+Types initiaux : `invitation_accepted` et `import_completed`. Les préférences sont propres à chaque utilisateur et à chaque type ; `in_app_enabled` vaut `true` par défaut et `push_enabled` vaut `false`. Les notifications sont filtrées par destinataire : un utilisateur ne peut ni lire ni marquer la notification d'un autre.
+
+Le Web Push est différé : le champ `push_enabled` est conservé pour la compatibilité future, mais aucun envoi push n'est effectué en V1.
+
