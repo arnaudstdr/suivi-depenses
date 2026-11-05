@@ -1,5 +1,7 @@
 # AGENTS.md
 
+Ce fichier est le guide projet à la racine, au format Markdown natif reconnu automatiquement par OpenCode. Il est versionné pour être partagé avec toute personne travaillant sur le dépôt. Aucune configuration OpenCode supplémentaire n'est nécessaire pour le charger.
+
 ## Mission du projet
 
 Construire **Suivi de dépenses**, une application web familiale pour deux membres d'un même foyer. L'objectif principal est de fournir un disponible personnel prévisionnel fiable, tout en séparant clairement les dépenses personnelles, les charges communes et le budget courses partagé.
