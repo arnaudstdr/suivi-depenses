@@ -127,8 +127,10 @@ class AllocationService:
                 message="Aucun membre actif dans le foyer.",
                 status_code=409,
             )
+        before = self._percentages(rule)
         _replace_members(rule, percentages)
         self._db.flush()
+        after = self._percentages(rule)
 
         self._audit.add(
             occurred_at=self._now(),
@@ -137,6 +139,7 @@ class AllocationService:
             entity_id=rule.id,
             actor_user_id=membership.user_id,
             household_id=membership.household_id,
+            details={"before": before, "after": after},
             request_id=request_id_var.get(),
         )
         self._db.commit()
@@ -153,6 +156,7 @@ class AllocationService:
         percentages = self._validate_members(membership.household_id, members)
 
         rule: AllocationRule | None = None
+        before: dict[str, str] = {}
         if recurring.allocation_rule_id is not None:
             rule = self._allocations.get_rule(recurring.allocation_rule_id)
         if rule is None or rule.is_default:
@@ -166,8 +170,10 @@ class AllocationService:
             self._db.flush()
             recurring.allocation_rule_id = rule.id
         else:
+            before = self._percentages(rule)
             _replace_members(rule, percentages)
             self._db.flush()
+        after = self._percentages(rule)
 
         self._audit.add(
             occurred_at=self._now(),
@@ -176,6 +182,11 @@ class AllocationService:
             entity_id=rule.id,
             actor_user_id=membership.user_id,
             household_id=membership.household_id,
+            details={
+                "recurring_id": str(recurring.id),
+                "before": before,
+                "after": after,
+            },
             request_id=request_id_var.get(),
         )
         self._db.commit()
@@ -188,7 +199,21 @@ class AllocationService:
     ) -> RecurringExpense:
         self._require_owner(membership)
         recurring = self._shared_recurring(membership, recurring_id)
+        rule: AllocationRule | None = None
+        if recurring.allocation_rule_id is not None:
+            rule = self._allocations.get_rule(recurring.allocation_rule_id)
         recurring.allocation_rule_id = None
+        self._db.flush()
+
+        deleted_rule_id: uuid.UUID | None = None
+        if (
+            rule is not None
+            and not rule.is_default
+            and self._allocations.count_recurring_usage(rule.id) == 0
+        ):
+            deleted_rule_id = rule.id
+            self._allocations.delete_rule(rule)
+
         self._audit.add(
             occurred_at=self._now(),
             action="allocation.recurring_cleared",
@@ -196,6 +221,10 @@ class AllocationService:
             entity_id=recurring.id,
             actor_user_id=membership.user_id,
             household_id=membership.household_id,
+            details={
+                "rule_id": str(rule.id) if rule is not None else None,
+                "deleted_rule_id": (str(deleted_rule_id) if deleted_rule_id is not None else None),
+            },
             request_id=request_id_var.get(),
         )
         self._db.commit()
@@ -264,6 +293,10 @@ class AllocationService:
                 status_code=404,
             )
         return recurring
+
+    @staticmethod
+    def _percentages(rule: AllocationRule) -> dict[str, str]:
+        return {str(member.user_id): str(member.percentage) for member in rule.members}
 
     @staticmethod
     def _require_owner(membership: HouseholdMember) -> None:

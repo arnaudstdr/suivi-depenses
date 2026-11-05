@@ -48,4 +48,5 @@ def contribution_public(
         transferred_amount_cents=contribution.transferred_amount_cents,
         transaction_id=contribution.transaction_id,
         created_at=contribution.created_at,
+        updated_at=contribution.updated_at,
     )

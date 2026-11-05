@@ -14,7 +14,10 @@ from app.core.request_context import request_id_var
 from app.domains.allocations.models import AllocationRule, HouseholdContribution
 from app.domains.allocations.repository import AllocationRepository
 from app.domains.allocations.rounding import split_signed_amount
-from app.domains.allocations.schemas import ContributionMarkTransferred
+from app.domains.allocations.schemas import (
+    ContributionCorrectTransfer,
+    ContributionMarkTransferred,
+)
 from app.domains.allocations.service import ensure_default_allocation_rule
 from app.domains.audit.repository import AuditRepository
 from app.domains.budgets.repository import BudgetRepository
@@ -26,7 +29,9 @@ from app.domains.households.models import HouseholdMember
 from app.domains.households.repository import HouseholdRepository
 from app.domains.planned.models import PlannedExpense
 from app.domains.recurring.models import RecurringExpense, RecurringOccurrence
+from app.domains.recurring.service import RecurringService
 from app.domains.transactions.models import Transaction
+from app.domains.transactions.repository import TransactionRepository
 from app.domains.transactions.schemas import TransactionCreate
 from app.domains.transactions.service import TransactionService
 from app.domains.users.models import User
@@ -42,6 +47,7 @@ class ContributionService:
         self._now = now or utcnow
         self._allocations = AllocationRepository(db)
         self._households = HouseholdRepository(db)
+        self._transactions = TransactionRepository(db)
         self._audit = AuditRepository(db)
 
     def list_contributions(
@@ -62,6 +68,10 @@ class ContributionService:
 
         period_value = period or current_period(membership.household.timezone)
         start, end = parse_period(period_value)
+        RecurringService(self._db, self._now).ensure_shared_occurrences_for_period(
+            membership.household_id,
+            period_value,
+        )
         percentages = {member.user_id: member.percentage for member in default_rule.members}
         shares = {member.user_id: 0 for member in default_rule.members}
         self._add_recurring_shares(
@@ -97,6 +107,8 @@ class ContributionService:
             for member in self._households.list_members(membership.household_id)
             if member.is_active
         ]
+        today_local = datetime.now(ZoneInfo(membership.household.timezone)).date()
+        is_past_period = end < today_local
         for member in active_members:
             amount_cents = max(shares.get(member.user_id, 0), 0)
             percentage = percentages.get(member.user_id, Decimal("0"))
@@ -116,7 +128,9 @@ class ContributionService:
                         status="pending",
                     )
                 )
-            elif contribution.status == "pending":
+            elif contribution.status == "pending" and not is_past_period:
+                # Une période passée est figée : une modification de règle ou une
+                # nouvelle lecture ne réécrit pas l'historique déjà matérialisé.
                 contribution.amount_cents = amount_cents
                 contribution.allocation_percentage = percentage
 
@@ -124,6 +138,25 @@ class ContributionService:
         return self._allocations.list_contributions(
             membership.household_id,
             start,
+        )
+
+    def list_history(
+        self,
+        membership: HouseholdMember,
+        *,
+        date_from: str | None,
+        date_to: str | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[HouseholdContribution], int]:
+        start = parse_period(date_from)[0] if date_from is not None else None
+        end = parse_period(date_to)[1] if date_to is not None else None
+        return self._allocations.list_contributions_history(
+            membership.household_id,
+            date_from=start,
+            date_to=end,
+            limit=limit,
+            offset=offset,
         )
 
     def mark_transferred(
@@ -188,6 +221,91 @@ class ContributionService:
             entity_id=contribution.id,
             actor_user_id=user.id,
             household_id=membership.household_id,
+            details={
+                "period": contribution.period_start.strftime("%Y-%m"),
+                "amount_cents": payload.transferred_amount_cents,
+                "transferred_at": payload.transferred_at.isoformat(),
+            },
+            request_id=request_id_var.get(),
+        )
+        self._db.commit()
+        return contribution
+
+    def correct_transfer(
+        self,
+        membership: HouseholdMember,
+        user: User,
+        contribution_id: uuid.UUID,
+        payload: ContributionCorrectTransfer,
+    ) -> HouseholdContribution:
+        contribution = self._allocations.get_contribution_for_update(contribution_id)
+        if contribution is None or contribution.household_id != membership.household_id:
+            raise AppError(
+                code="not_found",
+                message="Contribution introuvable.",
+                status_code=404,
+            )
+        if contribution.user_id != user.id:
+            raise AppError(
+                code="forbidden",
+                message="Chaque membre corrige uniquement sa propre contribution.",
+                status_code=403,
+            )
+        if contribution.status != "transferred" or contribution.transaction_id is None:
+            raise AppError(
+                code="contribution_not_transferred",
+                message="Seule une contribution déjà transférée peut être corrigée.",
+                status_code=409,
+            )
+
+        transaction = self._transactions.get_by_id(contribution.transaction_id)
+        if transaction is None or transaction.deleted_at is not None:
+            raise AppError(
+                code="linked_transaction_missing",
+                message="La transaction liée à cette contribution est introuvable.",
+                status_code=409,
+            )
+        refunded = self._transactions.sum_refunds(transaction.id)
+        if payload.transferred_amount_cents < refunded:
+            raise AppError(
+                code="invalid_transfer_amount",
+                message="Le montant corrigé ne peut pas être inférieur aux remboursements.",
+                status_code=422,
+            )
+
+        previous_amount = contribution.transferred_amount_cents
+        previous_transferred_at = contribution.transferred_at
+        transferred_local = payload.transferred_at.astimezone(
+            ZoneInfo(membership.household.timezone)
+        )
+
+        transaction.amount_cents = payload.transferred_amount_cents
+        transaction.transaction_date = transferred_local.date()
+        transaction.paid_at = payload.transferred_at
+        if payload.note is not None:
+            transaction.notes = payload.note
+
+        contribution.transferred_amount_cents = payload.transferred_amount_cents
+        contribution.transferred_at = payload.transferred_at
+
+        self._audit.add(
+            occurred_at=self._now(),
+            action="household_contribution.payment_corrected",
+            entity_type="household_contribution",
+            entity_id=contribution.id,
+            actor_user_id=user.id,
+            household_id=membership.household_id,
+            details={
+                "period": contribution.period_start.strftime("%Y-%m"),
+                "previous_amount_cents": previous_amount,
+                "amount_cents": payload.transferred_amount_cents,
+                "previous_transferred_at": (
+                    previous_transferred_at.isoformat()
+                    if previous_transferred_at is not None
+                    else None
+                ),
+                "transferred_at": payload.transferred_at.isoformat(),
+            },
             request_id=request_id_var.get(),
         )
         self._db.commit()

@@ -39,6 +39,12 @@ class ContributionMarkTransferred(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
 
 
+class ContributionCorrectTransfer(BaseModel):
+    transferred_at: AwareDatetime
+    transferred_amount_cents: int = Field(gt=0, strict=True)
+    note: str | None = Field(default=None, max_length=2000)
+
+
 class ContributionPublic(BaseModel):
     id: UUID
     household_id: UUID
@@ -54,3 +60,4 @@ class ContributionPublic(BaseModel):
     transferred_amount_cents: int | None
     transaction_id: UUID | None
     created_at: datetime
+    updated_at: datetime

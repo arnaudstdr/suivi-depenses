@@ -10,6 +10,7 @@ from app.api.dependencies import (
     require_csrf,
     require_owner,
 )
+from app.api.pagination import Page, PageParams
 from app.domains.allocations.contributions import ContributionService
 from app.domains.allocations.models import HouseholdContribution
 from app.domains.allocations.presenters import (
@@ -19,6 +20,7 @@ from app.domains.allocations.presenters import (
 from app.domains.allocations.schemas import (
     AllocationRulePublic,
     AllocationRuleUpdate,
+    ContributionCorrectTransfer,
     ContributionMarkTransferred,
     ContributionPublic,
 )
@@ -105,6 +107,29 @@ def list_contributions(
     return [contribution_public(item) for item in contributions]
 
 
+@contributions_router.get("/history", response_model=Page[ContributionPublic])
+def list_contributions_history(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    membership: HouseholdMember = Depends(get_current_membership),
+    db: Session = Depends(get_session),
+    params: PageParams = Depends(),
+) -> Page[ContributionPublic]:
+    items, total = ContributionService(db).list_history(
+        membership,
+        date_from=date_from,
+        date_to=date_to,
+        limit=params.limit,
+        offset=params.offset,
+    )
+    return Page[ContributionPublic](
+        items=[contribution_public(item) for item in items],
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
+
+
 @contributions_router.post(
     "/{contribution_id}/mark-transferred",
     response_model=ContributionPublic,
@@ -118,6 +143,27 @@ def mark_contribution_transferred(
     _: None = Depends(require_csrf),
 ) -> ContributionPublic:
     contribution: HouseholdContribution = ContributionService(db).mark_transferred(
+        membership,
+        user,
+        contribution_id,
+        payload,
+    )
+    return contribution_public(contribution)
+
+
+@contributions_router.post(
+    "/{contribution_id}/correct-transfer",
+    response_model=ContributionPublic,
+)
+def correct_contribution_transfer(
+    contribution_id: UUID,
+    payload: ContributionCorrectTransfer,
+    membership: HouseholdMember = Depends(get_current_membership),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+    _: None = Depends(require_csrf),
+) -> ContributionPublic:
+    contribution: HouseholdContribution = ContributionService(db).correct_transfer(
         membership,
         user,
         contribution_id,

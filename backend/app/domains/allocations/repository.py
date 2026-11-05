@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.domains.allocations.models import (
@@ -9,6 +9,7 @@ from app.domains.allocations.models import (
     AllocationRuleMember,
     HouseholdContribution,
 )
+from app.domains.recurring.models import RecurringExpense
 
 
 class AllocationRepository:
@@ -86,6 +87,55 @@ class AllocationRepository:
                 .order_by(HouseholdContribution.created_at)
             ).all()
         )
+
+    def list_contributions_history(
+        self,
+        household_id: uuid.UUID,
+        *,
+        date_from: date | None,
+        date_to: date | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[HouseholdContribution], int]:
+        conditions = [HouseholdContribution.household_id == household_id]
+        if date_from is not None:
+            conditions.append(HouseholdContribution.period_start >= date_from)
+        if date_to is not None:
+            conditions.append(HouseholdContribution.period_start <= date_to)
+
+        total = int(
+            self._db.scalar(
+                select(func.count()).select_from(HouseholdContribution).where(*conditions)
+            )
+            or 0
+        )
+        items = list(
+            self._db.scalars(
+                select(HouseholdContribution)
+                .options(joinedload(HouseholdContribution.user))
+                .where(*conditions)
+                .order_by(
+                    HouseholdContribution.period_start.desc(),
+                    HouseholdContribution.created_at,
+                )
+                .limit(limit)
+                .offset(offset)
+            ).all()
+        )
+        return items, total
+
+    def count_recurring_usage(self, rule_id: uuid.UUID) -> int:
+        return int(
+            self._db.scalar(
+                select(func.count())
+                .select_from(RecurringExpense)
+                .where(RecurringExpense.allocation_rule_id == rule_id)
+            )
+            or 0
+        )
+
+    def delete_rule(self, rule: AllocationRule) -> None:
+        self._db.delete(rule)
 
     def add_contribution(
         self,
